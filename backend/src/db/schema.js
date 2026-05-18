@@ -50,3 +50,63 @@ export const problems = pgTable(
     index("idx_problems_visibility").on(table.visibility),
   ],
 );
+
+export const tags = pgTable(
+  "tags",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: varchar("name", { length: 255 }).notNull().unique(),
+    slug: varchar("slug", { length: 255 }).notNull().unique(),
+    createdAt: timestamp("createdAt").defaultNow(),
+    updatedAt: timestamp("updatedAt").defaultNow(),
+  },
+  (table) => [
+    index("idx_tags_name").on(table.name),
+    index("idx_tags_slug").on(table.slug),
+  ],
+);
+
+export const problemTags = pgTable(
+  "problemTags",
+  {
+    problemId: uuid("problemId").references(() => problems.id),
+    tagId: uuid("tagId").references(() => tags.id),
+  },
+  (table) => [primaryKey({ columns: [table.problemId, table.tagId] })],
+);
+
+export const submissions = pgTable(
+  "submissions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    problemId: uuid("problemId").references(() => problems.id),
+    userId: uuid("userId").references(() => users.id),
+    code: text("code").notNull(),
+    status: varchar("status", { length: 255 }).notNull().default("PENDING"),
+    language: varchar("language", { length: 255 }).notNull(),
+    runtimeMs: integer("runtimeMs"),
+    memoryUsedMb: integer("memoryUsedMb"),
+    compileError: text("compileError"),
+    testCaseResults: jsonb("testCaseResults"),
+    createdAt: timestamp("createdAt").defaultNow(),
+    updatedAt: timestamp("updatedAt").defaultNow(),
+  },
+  (table) => [
+    index("idx_submissions_problemId").on(table.problemId),
+    index("idx_submissions_userId").on(table.userId),
+  ],
+);
+
+export const userProblemStatus = pgTable(
+  "userProblemStatus",
+  {
+    userId: uuid("userId").references(() => users.id),
+    problemId: uuid("problemId").references(() => problems.id),
+    status: varchar("status", { length: 255 }).notNull().default("UNSOLVED"),
+    lastAttemptedAt: timestamp("lastAttemptedAt"),
+    solvedAt: timestamp("solvedAt"),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.problemId] })],
+);
+
+// TODO :  ADD CONTEST TABLE AND RELATED TABLES , HINT TABLE , EDITORIAL TABLE , COMMENT TABLE , CONTEST ENTRY TABLE
