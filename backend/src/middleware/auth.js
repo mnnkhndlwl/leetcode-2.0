@@ -1,14 +1,15 @@
-import jwt from "jsonwebtoken";
+import { verifyToken } from "../utils/jwt.js";
+import { HTTP } from "../constants/http.js";
 
 export function requireAuth(req, res, next) {
   const header = req.headers.authorization;
   if (!header?.startsWith("Bearer ")) {
-    return res.status(401).json({ error: "Missing token" });
+    return res.status(HTTP.UNAUTHORIZED).json({ error: "Missing token" });
   }
   try {
-    req.user = jwt.verify(header.slice(7), process.env.JWT_SECRET);
+    req.user = verifyToken(header.slice(7));
     next();
   } catch {
-    res.status(401).json({ error: "Invalid token" });
+    res.status(HTTP.UNAUTHORIZED).json({ error: "Invalid token" });
   }
 }
