@@ -8,6 +8,13 @@
       "when": 1779082095933,
       "tag": "0000_material_goblin_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1779092101096,
+      "tag": "0001_demonic_william_stryker",
+      "breakpoints": true
     }
   ]
 }
