@@ -1,6 +1,6 @@
 import { db } from "../db/index.js";
 import { users } from "../db/schema.js";
-import { eq } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 import { hashPassword, comparePassword } from "../utils/hash.js";
 import { signToken } from "../utils/jwt.js";
 import { HTTP } from "../constants/http.js";
@@ -8,20 +8,18 @@ import { HTTP } from "../constants/http.js";
 export async function signup(req, res) {
   const { username, email, password } = req.body;
 
-  if (!username || !email || !password) {
-    return res
-      .status(HTTP.BAD_REQUEST)
-      .json({ error: "username, email, and password are required" });
-  }
-
   const [existing] = await db
-    .select({ id: users.id })
+    .select({ id: users.id, email: users.email, username: users.username })
     .from(users)
-    .where(eq(users.email, email))
+    .where(or(eq(users.email, email), eq(users.username, username)))
     .limit(1);
 
   if (existing) {
-    return res.status(HTTP.CONFLICT).json({ error: "Email already in use" });
+    const field = existing.email === email ? "email" : "username";
+    return res.status(HTTP.CONFLICT).json({
+      error: `${field} is already in use`,
+      fieldErrors: { [field]: `${field} is already in use` },
+    });
   }
 
   const passwordHash = await hashPassword(password);
@@ -37,12 +35,6 @@ export async function signup(req, res) {
 export async function login(req, res) {
   const { email, password } = req.body;
 
-  if (!email || !password) {
-    return res
-      .status(HTTP.BAD_REQUEST)
-      .json({ error: "email and password are required" });
-  }
-
   const [user] = await db
     .select()
     .from(users)
@@ -50,12 +42,16 @@ export async function login(req, res) {
     .limit(1);
 
   if (!user || user.isDeleted) {
-    return res.status(HTTP.UNAUTHORIZED).json({ error: "Invalid credentials" });
+    return res
+      .status(HTTP.UNAUTHORIZED)
+      .json({ error: "Invalid email or password" });
   }
 
   const valid = await comparePassword(password, user.passwordHash);
   if (!valid) {
-    return res.status(HTTP.UNAUTHORIZED).json({ error: "Invalid credentials" });
+    return res
+      .status(HTTP.UNAUTHORIZED)
+      .json({ error: "Invalid email or password" });
   }
 
   const { passwordHash: _, ...safeUser } = user;

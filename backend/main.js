@@ -1,12 +1,14 @@
 import "@dotenvx/dotenvx/config";
 import express from "express";
 import authRouter from "./src/routes/auth.routes.js";
+import submitCodeRouter from "./src/routes/submission.routes.js";
 import { errorHandler } from "./src/middleware/errorHandler.js";
 
 const app = express();
 app.use(express.json());
 
 app.use("/auth", authRouter);
+app.use("/submit", submitCodeRouter);
 
 app.use(errorHandler);
 
