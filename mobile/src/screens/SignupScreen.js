@@ -12,12 +12,14 @@ import {
   ScrollView,
 } from "react-native";
 import { signup } from "../api/auth";
+import useUserStore from "../store/useUserStore";
 
 export default function SignupScreen({ navigation }) {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const setAuth = useUserStore((s) => s.setAuth);
 
   async function handleSignup() {
     if (!username.trim() || !email.trim() || !password.trim()) {
@@ -31,9 +33,10 @@ export default function SignupScreen({ navigation }) {
     try {
       setLoading(true);
       const { user, token } = await signup(username.trim(), email.trim(), password);
-      navigation.replace("Home", { user, token });
+      setAuth(user, token);
+      // Navigation switches automatically — user state change triggers AppStack
     } catch (err) {
-      Alert.alert("Signup failed", err.message);
+      Alert.alert("Signup failed", err.response?.data?.error ?? err.message);
     } finally {
       setLoading(false);
     }

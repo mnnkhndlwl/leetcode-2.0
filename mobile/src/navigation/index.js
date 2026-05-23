@@ -1,22 +1,16 @@
 import { NavigationContainer } from "@react-navigation/native";
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import LoginScreen from "../screens/LoginScreen";
-import SignupScreen from "../screens/SignupScreen";
-import HomeScreen from "../screens/HomeScreen";
+import useUserStore from "../store/useUserStore";
+import AuthStack from "./AuthStack";
+import AppStack from "./AppStack";
 
-const Stack = createNativeStackNavigator();
-
+// MMKV is synchronous — Zustand persist rehydrates the store before the
+// first render, so there is no async loading state to handle here.
 export default function Navigation() {
+  const user = useUserStore((s) => s.user);
+
   return (
     <NavigationContainer>
-      <Stack.Navigator
-        initialRouteName="Login"
-        screenOptions={{ headerShown: false }}
-      >
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Signup" component={SignupScreen} />
-        <Stack.Screen name="Home" component={HomeScreen} />
-      </Stack.Navigator>
+      {user ? <AppStack /> : <AuthStack />}
     </NavigationContainer>
   );
 }

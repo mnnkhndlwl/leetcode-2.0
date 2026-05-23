@@ -1,4 +1,12 @@
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+} from "react-native";
+import useUserStore from "../store/useUserStore";
 
 const STATS = [
   { label: "Solved", value: "0", color: "#00b8a3" },
@@ -20,23 +28,40 @@ const EXPLORE_PROBLEMS = [
 
 const DIFFICULTY_COLOR = { Easy: "#00b8a3", Medium: "#ffa116", Hard: "#ef4743" };
 
-export default function HomeScreen({ route }) {
-  const user = route?.params?.user;
+export default function HomeScreen() {
+  const user = useUserStore((s) => s.user);
+  const logout = useUserStore((s) => s.logout);
+
+  function handleLogout() {
+    Alert.alert("Log out", "Are you sure you want to log out?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Log out",
+        style: "destructive",
+        onPress: logout,
+        // Clearing user in store switches navigation to AuthStack automatically
+      },
+    ]);
+  }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>Hello, {user?.username ?? "Coder"} 👋</Text>
+          <Text style={styles.greeting}>
+            Hello, {user?.username ?? "Coder"} 👋
+          </Text>
           <Text style={styles.subGreeting}>Ready to grind today?</Text>
         </View>
-        <View style={styles.avatar}>
+        <TouchableOpacity style={styles.avatar} onPress={handleLogout}>
           <Text style={styles.avatarText}>
             {(user?.username?.[0] ?? "U").toUpperCase()}
           </Text>
-        </View>
+        </TouchableOpacity>
       </View>
 
+      {/* Stats */}
       <View style={styles.statsRow}>
         {STATS.map((s) => (
           <View key={s.label} style={styles.statCard}>
@@ -46,6 +71,7 @@ export default function HomeScreen({ route }) {
         ))}
       </View>
 
+      {/* Progress */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Progress</Text>
         {DIFFICULTY_BARS.map((d) => (
@@ -67,6 +93,7 @@ export default function HomeScreen({ route }) {
         ))}
       </View>
 
+      {/* Daily Challenge */}
       <TouchableOpacity style={styles.challengeCard} activeOpacity={0.8}>
         <View>
           <Text style={styles.challengeLabel}>Daily Challenge</Text>
@@ -75,6 +102,7 @@ export default function HomeScreen({ route }) {
         <Text style={styles.challengeArrow}>→</Text>
       </TouchableOpacity>
 
+      {/* Explore */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Explore Problems</Text>
         {EXPLORE_PROBLEMS.map((p, i) => (
@@ -88,7 +116,10 @@ export default function HomeScreen({ route }) {
           >
             <View style={styles.problemLeft}>
               <View
-                style={[styles.dot, { backgroundColor: DIFFICULTY_COLOR[p.difficulty] }]}
+                style={[
+                  styles.dot,
+                  { backgroundColor: DIFFICULTY_COLOR[p.difficulty] },
+                ]}
               />
               <Text style={styles.problemTitle} numberOfLines={1}>
                 {p.title}

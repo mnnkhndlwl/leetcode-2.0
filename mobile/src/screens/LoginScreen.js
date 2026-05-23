@@ -11,11 +11,13 @@ import {
   Alert,
 } from "react-native";
 import { login } from "../api/auth";
+import useUserStore from "../store/useUserStore";
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const setAuth = useUserStore((s) => s.setAuth);
 
   async function handleLogin() {
     if (!email.trim() || !password.trim()) {
@@ -25,9 +27,10 @@ export default function LoginScreen({ navigation }) {
     try {
       setLoading(true);
       const { user, token } = await login(email.trim(), password);
-      navigation.replace("Home", { user, token });
+      setAuth(user, token);
+      // Navigation switches automatically — user state change triggers AppStack
     } catch (err) {
-      Alert.alert("Login failed", err.message);
+      Alert.alert("Login failed", err.response?.data?.error ?? err.message);
     } finally {
       setLoading(false);
     }
