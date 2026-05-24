@@ -16,6 +16,10 @@ type Config struct {
 	AWSRegion          string
 	MaxConcurrentJobs  int
 	WorkerPollInterval time.Duration
+	// Optional: ECR registry prefix, e.g. "123456.dkr.ecr.ap-south-1.amazonaws.com"
+	// When set, images are resolved as "<ImageRegistry>/judge:<language>"
+	// When empty, falls back to local "judge-<language>:latest"
+	ImageRegistry string
 }
 
 // Load reads the .env file (if present) then maps environment variables into
@@ -61,6 +65,9 @@ func Load() (*Config, error) {
 		}
 		cfg.WorkerPollInterval = time.Duration(secs) * time.Second
 	}
+
+	// Optional — empty is valid (falls back to local image names)
+	cfg.ImageRegistry = os.Getenv("IMAGE_REGISTRY")
 
 	if len(missing) > 0 {
 		return nil, fmt.Errorf("config: missing required environment variable(s): %v", missing)

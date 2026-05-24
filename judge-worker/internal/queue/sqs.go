@@ -1,23 +1,77 @@
 package queue
 
+import (
+	"context"
+	"encoding/json"
+	"log"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
+	"github.com/leetcode-2.0/judge/internal/config"
+	"github.com/leetcode-2.0/judge/internal/models"
+)
 
-// Pseudocode — understand the pattern first
-func (q *SQSClient) Poll(ctx context.Context, handler func(SubmissionMessage) error) {
-    for {
-        // 1. long-poll: wait up to 20s for messages (cheaper than hammering SQS)
-        messages := sqs.ReceiveMessage(waitTimeSeconds=20, maxMessages=1)
+type SQSClient struct {
+	client          *sqs.Client
+	submissionQueue string
+	resultQueue     string
+}
 
-        for _, msg := range messages {
-            // 2. process — handler does the judging
-            err := handler(msg)
+func New(cfg *config.Config) *SQSClient {
+	awsCfg, err := awsconfig.LoadDefaultConfig(context.Background(),
+		awsconfig.WithRegion(cfg.AWSRegion),
+	)
+	if err != nil {
+		panic("failed to load AWS config: " + err.Error())
+	}
+	return &SQSClient{
+		client:          sqs.NewFromConfig(awsCfg),
+		submissionQueue: cfg.SubmissionQueueURL,
+		resultQueue:     cfg.ResultQueueURL,
+	}
+}
 
-            if err == nil {
-                // 3. only delete AFTER successful processing
-                sqs.DeleteMessage(msg.ReceiptHandle)
-            }
-            // if err != nil — message stays in queue, visibility timeout
-            // expires, another worker picks it up (automatic retry)
-        }
-    }
+func (q *SQSClient) Poll(ctx context.Context, handler func(models.SubmissionMessage) error) {
+	for {
+		out, err := q.client.ReceiveMessage(ctx, &sqs.ReceiveMessageInput{
+			QueueUrl:            aws.String(q.submissionQueue),
+			MaxNumberOfMessages: 1,
+			WaitTimeSeconds:     20,
+		})
+		if err != nil {
+			log.Printf("sqs receive error: %v", err)
+			continue
+		}
+
+		for _, msg := range out.Messages {
+			var submission models.SubmissionMessage
+			if err := json.Unmarshal([]byte(aws.ToString(msg.Body)), &submission); err != nil {
+				log.Printf("failed to unmarshal message: %v", err)
+				continue
+			}
+
+			if err := handler(submission); err == nil {
+				_, delErr := q.client.DeleteMessage(ctx, &sqs.DeleteMessageInput{
+					QueueUrl:      aws.String(q.submissionQueue),
+					ReceiptHandle: msg.ReceiptHandle,
+				})
+				if delErr != nil {
+					log.Printf("failed to delete message %s: %v", aws.ToString(msg.MessageId), delErr)
+				}
+			}
+		}
+	}
+}
+
+func (q *SQSClient) PublishResult(result models.JudgeResult) error {
+	body, err := json.Marshal(result)
+	if err != nil {
+		return err
+	}
+	_, err = q.client.SendMessage(context.Background(), &sqs.SendMessageInput{
+		QueueUrl:    aws.String(q.resultQueue),
+		MessageBody: aws.String(string(body)),
+	})
+	return err
 }

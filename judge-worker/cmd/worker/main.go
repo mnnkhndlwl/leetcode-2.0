@@ -2,17 +2,26 @@ package main
 
 import (
 	"context"
+	"log"
 
 	"github.com/leetcode-2.0/judge/internal/config"
+	"github.com/leetcode-2.0/judge/internal/health"
+	"github.com/leetcode-2.0/judge/internal/judge"
 	"github.com/leetcode-2.0/judge/internal/models"
+	"github.com/leetcode-2.0/judge/internal/queue"
+	s3client "github.com/leetcode-2.0/judge/internal/s3"
 )
 
 func main() {
-	cfg := config.Load() // panic if env vars missing
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	sqsClient := queue.New(cfg)
-	s3Client := s3client.New(cfg)
+	s3 := s3client.New(cfg)
 	cache := judge.NewCache()
-	judger := judge.New(s3Client, cache)
+	judger := judge.New(s3, cache, cfg.ImageRegistry)
 
 	// Health server — ECS needs this to know the task is alive
 	go health.StartServer(":8080")
@@ -28,8 +37,10 @@ func main() {
 			defer func() { <-sem }() // release slot when done
 
 			result := judger.Run(msg)
-			sqsClient.PublishResult(result)
+			if err := sqsClient.PublishResult(result); err != nil {
+				log.Printf("failed to publish result for submission %s: %v", msg.SubmissionID, err)
+			}
 		}()
-		return nil // return nil so SQS message gets deleted immediately
+		return nil // nil → SQS message deleted immediately after goroutine is spawned
 	})
 }

@@ -1,35 +1,198 @@
 package judge
 
-// Mental model of what the Docker SDK call looks like
-func runContainer(ctx context.Context, input RunInput) RunOutput {
-    // 1. Create container (don't start yet)
-    container := docker.CreateContainer({
-        Image:  "judge-" + input.Language + ":latest",
-        Memory: input.MemoryLimitMb * 1024 * 1024,  // bytes
-        CPUQuota: 50000,   // 0.5 CPU
-        NetworkDisabled: true,
-        ReadOnlyRootFS:  true,
-        Tmpfs: {"/tmp": ""},
-    })
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"log"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"sync"
+	"time"
 
-    // 2. Attach stdin pipe BEFORE starting
-    stdin := attachStdin(container)
+	"github.com/leetcode-2.0/judge/internal/models"
+	s3client "github.com/leetcode-2.0/judge/internal/s3"
+)
 
-    // 3. Start
-    docker.StartContainer(container.ID)
+type TestCaseCache struct {
+	data sync.Map // key: problemSlug, value: []s3client.TestCase
+}
 
-    // 4. Write test case input to stdin, then close
-    stdin.Write(input.TestCaseInput)
-    stdin.Close()
+func NewCache() *TestCaseCache {
+	return &TestCaseCache{}
+}
 
-    // 5. Wait with timeout — this is where wall-clock enforcement happens
-    exitCode, err := waitWithTimeout(container.ID, input.TimeLimitMs + 2000)
+type Judge struct {
+	s3            *s3client.S3Client
+	cache         *TestCaseCache
+	imageRegistry string
+}
 
-    // 6. Capture stdout/stderr
-    stdout, stderr := getLogs(container.ID)
+func New(s3 *s3client.S3Client, cache *TestCaseCache, imageRegistry string) *Judge {
+	return &Judge{s3: s3, cache: cache, imageRegistry: imageRegistry}
+}
 
-    // 7. Always clean up — memory leak if you don't
-    docker.RemoveContainer(container.ID, force=true)
+// imageFor resolves the full image name for a language.
+// With a registry: "123456.dkr.ecr.../judge:python3"
+// Without:         "judge-python3:latest"  (local dev)
+func (j *Judge) imageFor(lang string) string {
+	if j.imageRegistry != "" {
+		return j.imageRegistry + "/judge:" + lang
+	}
+	return "judge-" + lang + ":latest"
+}
 
-    return RunOutput{stdout, stderr, exitCode, runtimeMs}
+// langFilename returns the source filename the runner script expects at /code/
+func langFilename(lang string) string {
+	switch lang {
+	case "java":
+		return "Main.java" // Java enforces filename == public class name
+	case "python3":
+		return "solution.py"
+	case "javascript":
+		return "solution.js"
+	case "cpp":
+		return "solution.cpp"
+	case "go":
+		return "solution.go"
+	default:
+		return "solution"
+	}
+}
+
+func (j *Judge) getTestCases(slug, s3Key string) ([]s3client.TestCase, error) {
+	if cached, ok := j.cache.data.Load(slug); ok {
+		return cached.([]s3client.TestCase), nil
+	}
+
+	data, err := j.s3.Download(s3Key)
+	if err != nil {
+		return nil, fmt.Errorf("s3 download %s: %w", s3Key, err)
+	}
+
+	var testCases []s3client.TestCase
+	if err := json.Unmarshal(data, &testCases); err != nil {
+		return nil, fmt.Errorf("unmarshal test cases: %w", err)
+	}
+
+	j.cache.data.Store(slug, testCases)
+	return testCases, nil
+}
+
+func (j *Judge) Run(msg models.SubmissionMessage) models.JudgeResult {
+	result := models.JudgeResult{
+		SubmissionID: msg.SubmissionID,
+	}
+
+	testCases, err := j.getTestCases(msg.ProblemSlug, msg.TestCasesS3Key)
+	if err != nil {
+		result.Status = "RUNTIME_ERROR"
+		result.CompileError = "failed to load test cases: " + err.Error()
+		return result
+	}
+
+	// Write the submission code to a temp dir; mount it read-only into the container.
+	// Each submission gets its own dir so concurrent runs don't collide.
+	codeDir, err := os.MkdirTemp("", "submission-"+msg.SubmissionID+"-*")
+	if err != nil {
+		result.Status = "RUNTIME_ERROR"
+		result.CompileError = "failed to create code dir: " + err.Error()
+		return result
+	}
+	defer os.RemoveAll(codeDir)
+
+	codePath := filepath.Join(codeDir, langFilename(msg.Language))
+	if err := os.WriteFile(codePath, []byte(msg.Code), 0644); err != nil {
+		result.Status = "RUNTIME_ERROR"
+		result.CompileError = "failed to write code: " + err.Error()
+		return result
+	}
+
+	result.TotalCount = len(testCases)
+	result.TestCaseResults = make([]models.TestCaseResult, 0, len(testCases))
+
+	image := j.imageFor(msg.Language)
+	overallStatus := "ACCEPTED"
+	var maxRuntimeMs int64
+
+	for _, tc := range testCases {
+		tcResult, status := runTestCase(image, codeDir, tc, msg)
+		result.TestCaseResults = append(result.TestCaseResults, tcResult)
+
+		if tcResult.RuntimeMs > maxRuntimeMs {
+			maxRuntimeMs = tcResult.RuntimeMs
+		}
+		if status != "ACCEPTED" && overallStatus == "ACCEPTED" {
+			overallStatus = status
+		}
+		if tcResult.Passed {
+			result.PassedCount++
+		}
+	}
+
+	result.Status = overallStatus
+	result.RuntimeMs = maxRuntimeMs
+	return result
+}
+
+func runTestCase(image, codeDir string, tc s3client.TestCase, msg models.SubmissionMessage) (models.TestCaseResult, string) {
+	// wall-clock timeout = problem limit + 2s grace
+	timeout := time.Duration(msg.TimeLimitMs+2000) * time.Millisecond
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	args := []string{
+		"run", "--rm", "-i",
+		"--network", "none",
+		fmt.Sprintf("--memory=%dm", msg.MemoryLimitMb),
+		"--cpus=0.5",
+		"--read-only",
+		"--tmpfs", "/tmp",
+		// mount the submission code read-only; the run.sh inside each image reads from /code/
+		"-v", codeDir + ":/code:ro",
+		image,
+	}
+
+	cmd := exec.CommandContext(ctx, "docker", args...)
+	cmd.Stdin = strings.NewReader(tc.Input) // test case input → program's stdin
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	start := time.Now()
+	runErr := cmd.Run()
+	runtimeMs := time.Since(start).Milliseconds()
+
+	tcResult := models.TestCaseResult{
+		ID:        tc.ID,
+		RuntimeMs: runtimeMs,
+	}
+
+	if ctx.Err() == context.DeadlineExceeded {
+		return tcResult, "TIME_LIMIT_EXCEEDED"
+	}
+
+	if runErr != nil {
+		if exitErr, ok := runErr.(*exec.ExitError); ok {
+			// OOM kill — Linux sends SIGKILL → exit 137 (128 + 9)
+			if exitErr.ExitCode() == 137 {
+				return tcResult, "MEMORY_LIMIT_EXCEEDED"
+			}
+		}
+		if stderr.Len() > 0 {
+			log.Printf("submission %s tc %d stderr: %s", msg.SubmissionID, tc.ID, stderr.String())
+		}
+		return tcResult, "RUNTIME_ERROR"
+	}
+
+	if strings.TrimSpace(stdout.String()) == strings.TrimSpace(tc.ExpectedOutput) {
+		tcResult.Passed = true
+		return tcResult, "ACCEPTED"
+	}
+
+	return tcResult, "WRONG_ANSWER"
 }

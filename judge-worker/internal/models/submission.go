@@ -12,6 +12,12 @@ type SubmissionMessage struct {
 	TestCasesS3Key string `json:"testCasesS3Key"`
 }
 
+type TestCaseResult struct {
+	ID        int   `json:"id"`
+	Passed    bool  `json:"passed"`
+	RuntimeMs int64 `json:"runtimeMs"`
+}
+
 type JudgeResult struct {
 	SubmissionID    string           `json:"submissionId"`
 	Status          string           `json:"status"`
