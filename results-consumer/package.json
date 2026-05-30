@@ -1,0 +1,17 @@
+{
+  "name": "results-consumer",
+  "version": "1.0.0",
+  "main": "main.js",
+  "type": "module",
+  "scripts": {
+    "start": "node main.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@aws-sdk/client-sqs": "^3.1057.0",
+    "dotenv": "^17.4.2"
+  }
+}
