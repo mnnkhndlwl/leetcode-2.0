@@ -4,6 +4,9 @@ import {
   ReceiveMessageCommand,
   DeleteMessageCommand,
 } from "@aws-sdk/client-sqs";
+import { eq } from "drizzle-orm";
+import { db } from "./db.js";
+import { submissions } from "./schema.js";
 
 const sqs = new SQSClient({
   region: process.env.AWS_REGION,
@@ -35,15 +38,54 @@ const QUEUE_URL = process.env.SQS_RESULT_QUEUE_URL;
  */
 
 /**
- * Process a single judge result.
+ * Write a judge result back to the database.
+ *
+ * This function does a single UPDATE on submissions.
+ * The DB trigger `trg_submission_judged` automatically handles:
+ *   - problems.totalSubmissions / totalAccepted counters
+ *   - userProblemStatus upsert (SOLVED/ATTEMPTED, never downgrade)
+ *
  * @param {JudgeResult} result
  */
 async function handleResult(result) {
+  // Idempotency guard — SQS delivers at-least-once, so check current status first.
+  // If it's already a final verdict, a previous delivery already processed this message.
+  const [submission] = await db
+    .select({ status: submissions.status })
+    .from(submissions)
+    .where(eq(submissions.id, result.submissionId))
+    .limit(1);
+
+  if (!submission) {
+    throw new Error(`Submission not found: ${result.submissionId}`);
+  }
+
+  if (submission.status !== "PENDING" && submission.status !== "RUNNING") {
+    console.log(
+      `[${result.submissionId}] already processed (status=${submission.status}), skipping`
+    );
+    return;
+  }
+
+  // Single UPDATE — the DB trigger fires here and handles everything else atomically
+  await db
+    .update(submissions)
+    .set({
+      status: result.status,
+      runtimeMs: result.runtimeMs,
+      memoryUsedMb: result.memoryUsedMb,
+      compileError: result.compileError ?? null,
+      testCaseResults: result.testCaseResults,
+      updatedAt: new Date(),
+    })
+    .where(eq(submissions.id, result.submissionId));
+
   console.log(
     `[${result.submissionId}] ${result.status} — ${result.passedCount}/${result.totalCount} passed — ${result.runtimeMs}ms`
   );
-  // TODO: write result to DB, push to WebSocket, etc.
 }
+
+// ── SQS poll loop ────────────────────────────────────────────────────────────
 
 async function poll() {
   console.log("Result consumer started. Polling", QUEUE_URL);
@@ -64,14 +106,14 @@ async function poll() {
         result = JSON.parse(msg.Body);
       } catch (err) {
         console.error("Failed to parse message body:", err.message);
-        // leave in queue — bad messages will hit the DLQ after max receives
+        // leave in queue — malformed messages will hit the DLQ after max receives
         continue;
       }
 
       try {
         await handleResult(result);
 
-        // only delete after successful processing
+        // only delete AFTER successful DB write
         await sqs.send(
           new DeleteMessageCommand({
             QueueUrl: QUEUE_URL,
