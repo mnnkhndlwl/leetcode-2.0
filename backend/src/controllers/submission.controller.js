@@ -70,3 +70,24 @@ export const submitCode = async (req, res) => {
     status: SUBMISSION_STATUS.PENDING,
   });
 };
+
+export const getSubmission = async (req, res) => {
+  const { id: userId } = req.user;
+  const { id } = req.params;
+
+  const [submission] = await db
+    .select()
+    .from(submissions)
+    .where(eq(submissions.id, id))
+    .limit(1);
+
+  if (!submission) {
+    return res.status(HTTP.NOT_FOUND).json({ error: "Submission not found" });
+  }
+
+  if (submission.userId !== userId) {
+    return res.status(HTTP.FORBIDDEN).json({ error: "Access denied" });
+  }
+
+  return res.status(HTTP.OK).json(submission);
+};

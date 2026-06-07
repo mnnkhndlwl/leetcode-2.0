@@ -4,7 +4,10 @@ import { SUPPORTED_LANGUAGES } from "../constants/languages.js";
 export const submitCodeSchema = z.object({
   problemId: z
     .string({ error: "problemId is required" })
-    .uuid({ message: "problemId must be a valid UUID" }),
+    .regex(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+      { message: "problemId must be a valid UUID" },
+    ),
 
   language: z.enum(SUPPORTED_LANGUAGES, {
     error: `language must be one of: ${SUPPORTED_LANGUAGES.join(", ")}`,

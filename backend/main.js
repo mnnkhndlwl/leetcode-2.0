@@ -8,7 +8,7 @@ const app = express();
 app.use(express.json());
 
 app.use("/auth", authRouter);
-app.use("/submit", submitCodeRouter);
+app.use("/submissions", submitCodeRouter);
 
 app.use(errorHandler);
 

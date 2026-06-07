@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
@@ -69,9 +70,20 @@ func (q *SQSClient) PublishResult(result models.JudgeResult) error {
 	if err != nil {
 		return err
 	}
-	_, err = q.client.SendMessage(context.Background(), &sqs.SendMessageInput{
+
+	input := &sqs.SendMessageInput{
 		QueueUrl:    aws.String(q.resultQueue),
 		MessageBody: aws.String(string(body)),
-	})
+	}
+
+	// FIFO queues require MessageGroupId.
+	// Use the submissionId as both group and deduplication key — each submission
+	// produces exactly one result so this prevents accidental duplicate writes.
+	if strings.HasSuffix(q.resultQueue, ".fifo") {
+		input.MessageGroupId = aws.String(result.SubmissionID)
+		input.MessageDeduplicationId = aws.String(result.SubmissionID)
+	}
+
+	_, err = q.client.SendMessage(context.Background(), input)
 	return err
 }
