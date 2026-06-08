@@ -82,33 +82,36 @@ func (j *Judge) getTestCases(slug, s3Key string) ([]s3client.TestCase, error) {
 	return testCases, nil
 }
 
-func (j *Judge) Run(msg models.SubmissionMessage) models.JudgeResult {
+// Run judges a submission. It returns a non-nil error ONLY for transient
+// infrastructure failures (S3 unreachable, disk full) — these are NOT the
+// submitter's fault and must be retried, so the caller should leave the SQS
+// message in the queue (eventually routing it to the DLQ) rather than deleting
+// it. A nil error means a legitimate verdict was produced (including a user
+// RUNTIME_ERROR), and the result should be published and the message deleted.
+func (j *Judge) Run(msg models.SubmissionMessage) (models.JudgeResult, error) {
 	result := models.JudgeResult{
 		SubmissionID: msg.SubmissionID,
 	}
 
 	testCases, err := j.getTestCases(msg.ProblemSlug, msg.TestCasesS3Key)
 	if err != nil {
-		result.Status = "RUNTIME_ERROR"
-		result.CompileError = "failed to load test cases: " + err.Error()
-		return result
+		// Transient: test cases live in S3. Don't blame the user — retry.
+		return result, fmt.Errorf("failed to load test cases: %w", err)
 	}
 
 	// Write the submission code to a temp dir; mount it read-only into the container.
 	// Each submission gets its own dir so concurrent runs don't collide.
 	codeDir, err := os.MkdirTemp("", "submission-"+msg.SubmissionID+"-*")
 	if err != nil {
-		result.Status = "RUNTIME_ERROR"
-		result.CompileError = "failed to create code dir: " + err.Error()
-		return result
+		// Transient: local disk problem. Retry on another (or the same) worker.
+		return result, fmt.Errorf("failed to create code dir: %w", err)
 	}
 	defer os.RemoveAll(codeDir)
 
 	codePath := filepath.Join(codeDir, langFilename(msg.Language))
 	if err := os.WriteFile(codePath, []byte(msg.Code), 0644); err != nil {
-		result.Status = "RUNTIME_ERROR"
-		result.CompileError = "failed to write code: " + err.Error()
-		return result
+		// Transient: local disk problem. Retry.
+		return result, fmt.Errorf("failed to write code: %w", err)
 	}
 
 	result.TotalCount = len(testCases)
@@ -135,7 +138,7 @@ func (j *Judge) Run(msg models.SubmissionMessage) models.JudgeResult {
 
 	result.Status = overallStatus
 	result.RuntimeMs = maxRuntimeMs
-	return result
+	return result, nil
 }
 
 func runTestCase(image, codeDir string, tc s3client.TestCase, msg models.SubmissionMessage) (models.TestCaseResult, string) {

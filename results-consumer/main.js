@@ -18,6 +18,14 @@ const sqs = new SQSClient({
 
 const QUEUE_URL = process.env.SQS_RESULT_QUEUE_URL;
 
+// How long a received result stays invisible to other consumers while this one
+// writes it to the DB. Must comfortably exceed the DB round-trip; on handler
+// error we deliberately leave the message in the queue, so this is also the
+// retry delay before SQS redelivers (and eventually routes it to the DLQ).
+const VISIBILITY_TIMEOUT_SECONDS = Number(
+  process.env.VISIBILITY_TIMEOUT_SECONDS ?? 60
+);
+
 /**
  * @typedef {Object} TestCaseResult
  * @property {number} id
@@ -91,13 +99,23 @@ async function poll() {
   console.log("Result consumer started. Polling", QUEUE_URL);
 
   while (true) {
-    const { Messages = [] } = await sqs.send(
-      new ReceiveMessageCommand({
-        QueueUrl: QUEUE_URL,
-        MaxNumberOfMessages: 10,
-        WaitTimeSeconds: 20, // long-poll — cheaper than hammering SQS
-      })
-    );
+    let Messages = [];
+    try {
+      ({ Messages = [] } = await sqs.send(
+        new ReceiveMessageCommand({
+          QueueUrl: QUEUE_URL,
+          MaxNumberOfMessages: 10,
+          WaitTimeSeconds: 20, // long-poll — cheaper than hammering SQS
+          VisibilityTimeout: VISIBILITY_TIMEOUT_SECONDS,
+        })
+      ));
+    } catch (err) {
+      // Transient receive failure (throttling, network). Back off and retry
+      // instead of crashing the consumer.
+      console.error("sqs receive error:", err.message);
+      await new Promise((r) => setTimeout(r, 2000));
+      continue;
+    }
 
     for (const msg of Messages) {
       let result;

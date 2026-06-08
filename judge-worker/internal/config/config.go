@@ -16,6 +16,11 @@ type Config struct {
 	AWSRegion          string
 	MaxConcurrentJobs  int
 	WorkerPollInterval time.Duration
+	// VisibilityTimeout is how long a received submission stays invisible to other
+	// workers while this one judges it. It MUST exceed the worst-case judge time
+	// (container spin-up + all test cases) or SQS will redeliver a message that's
+	// still being processed, causing duplicate judging.
+	VisibilityTimeout time.Duration
 	// Optional: ECR registry prefix, e.g. "123456.dkr.ecr.ap-south-1.amazonaws.com"
 	// When set, images are resolved as "<ImageRegistry>/judge:<language>"
 	// When empty, falls back to local "judge-<language>:latest"
@@ -64,6 +69,16 @@ func Load() (*Config, error) {
 			return nil, fmt.Errorf("config: POLL_WAIT_SECONDS must be a positive integer, got %q", pollStr)
 		}
 		cfg.WorkerPollInterval = time.Duration(secs) * time.Second
+	}
+
+	// --- VisibilityTimeout (seconds, required) ---
+	visStr := requireEnv("VISIBILITY_TIMEOUT_SECONDS")
+	if visStr != "" {
+		secs, err := strconv.Atoi(visStr)
+		if err != nil || secs <= 0 {
+			return nil, fmt.Errorf("config: VISIBILITY_TIMEOUT_SECONDS must be a positive integer, got %q", visStr)
+		}
+		cfg.VisibilityTimeout = time.Duration(secs) * time.Second
 	}
 
 	// Optional — empty is valid (falls back to local image names)
