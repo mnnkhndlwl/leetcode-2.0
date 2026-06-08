@@ -48,6 +48,8 @@ export const problems = pgTable(
     memoryLimitMb: integer("memoryLimitMb").notNull().default(256),
     sampleTestCases: jsonb("sampleTestCases"),
     testCasesFileUrl: varchar("testCasesFileUrl", { length: 255 }),
+    codeTemplates: jsonb("codeTemplates"),
+    driverCode: jsonb("driverCode"),
     totalSubmissions: integer("totalSubmissions").notNull().default(0),
     totalAccepted: integer("totalAccepted").notNull().default(0),
     createdByUserId: uuid("createdByUserId").references(() => users.id),

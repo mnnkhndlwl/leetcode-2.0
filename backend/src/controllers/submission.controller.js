@@ -18,6 +18,7 @@ export const submitCode = async (req, res) => {
       memoryLimitMb: problems.memoryLimitMb,
       testCasesFileUrl: problems.testCasesFileUrl,
       visibility: problems.visibility,
+      driverCode: problems.driverCode,
     })
     .from(problems)
     .where(eq(problems.id, problemId))
@@ -47,7 +48,11 @@ export const submitCode = async (req, res) => {
     })
     .returning({ id: submissions.id });
 
-  // 3. Publish to SQS — code travels inline (competitive code is tiny, well under 256KB limit)
+  // 3. Combine user function with hidden driver code (function-only mode)
+  const driver = problem.driverCode?.[language];
+  const codeToRun = driver ? `${code}\n\n${driver}` : code;
+
+  // 4. Publish to SQS — code travels inline (competitive code is tiny, well under 256KB limit)
   await publishToQueue(
     process.env.SQS_SUBMISSION_QUEUE_URL,
     {
@@ -56,7 +61,7 @@ export const submitCode = async (req, res) => {
       problemSlug: problem.slug,
       userId,
       language,
-      code,
+      code: codeToRun,
       timeLimitMs: problem.timeLimitMs,
       memoryLimitMb: problem.memoryLimitMb,
       testCasesS3Key: problem.testCasesFileUrl,
