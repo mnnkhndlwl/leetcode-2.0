@@ -4,9 +4,18 @@ import {
   ReceiveMessageCommand,
   DeleteMessageCommand,
 } from "@aws-sdk/client-sqs";
+import Redis from "ioredis";
 import { eq } from "drizzle-orm";
 import { db } from "./db.js";
 import { submissions } from "./schema.js";
+
+// Redis publisher — used to notify the ws-server that a verdict is ready.
+// This is best-effort: the DB write is the source of truth. If Redis is down
+// the client falls back to the already-judged path in the ws-server (DB query).
+const redis = new Redis(process.env.REDIS_URL);
+redis.on("error", (err) =>
+  console.error("[redis] connection error:", err.message)
+);
 
 const sqs = new SQSClient({
   region: process.env.AWS_REGION,
@@ -91,6 +100,28 @@ async function handleResult(result) {
   console.log(
     `[${result.submissionId}] ${result.status} — ${result.passedCount}/${result.totalCount} passed — ${result.runtimeMs}ms`
   );
+
+  // Publish to Redis so the ws-server can push the verdict to the connected client.
+  // Wrapped in try/catch so a Redis outage never prevents the SQS message from
+  // being deleted — the DB write already succeeded and the ws-server has a
+  // DB fallback for clients that connect after the verdict lands.
+  try {
+    await redis.publish(
+      `submission:${result.submissionId}`,
+      JSON.stringify({
+        submissionId: result.submissionId,
+        status: result.status,
+        runtimeMs: result.runtimeMs,
+        memoryUsedMb: result.memoryUsedMb,
+        compileError: result.compileError ?? null,
+        testCaseResults: result.testCaseResults,
+        passedCount: result.passedCount,
+        totalCount: result.totalCount,
+      })
+    );
+  } catch (err) {
+    console.error(`[redis] failed to publish verdict for ${result.submissionId}:`, err.message);
+  }
 }
 
 // ── SQS poll loop ────────────────────────────────────────────────────────────
