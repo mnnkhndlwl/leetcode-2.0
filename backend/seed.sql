@@ -386,3 +386,684 @@ INSERT INTO "problemTags" ("problemId", "tagId") VALUES
 ON CONFLICT DO NOTHING;
 
 COMMIT;
+
+-- =============================================================
+-- CODE TEMPLATES + DRIVER CODE  (python3, javascript, cpp)
+-- =============================================================
+-- codeTemplates : starter stub shown in the editor (function-only).
+-- driverCode    : hidden harness appended after the user's code.
+--                 Reads the test case from stdin, calls the user's
+--                 function, prints the result to stdout. The judge
+--                 compares trimmed stdout to the expected output.
+--
+-- Idempotent: plain UPDATEs keyed by slug — safe to re-run.
+-- See the bottom of this file / chat for the full stdin/stdout
+-- contract each driver expects.
+-- =============================================================
+
+BEGIN;
+
+-- ── Two Sum ──────────────────────────────────────────────────
+-- in : line1=n | line2=n ints (nums) | line3=target
+-- out: "i j"
+UPDATE problems SET
+  "codeTemplates" = jsonb_build_object(
+    'python3', $PY$class Solution:
+    def twoSum(self, nums, target):
+        # Write your code here
+        pass$PY$,
+    'javascript', $JS$var twoSum = function(nums, target) {
+    // Write your code here
+};$JS$,
+    'cpp', $CPP$#include <bits/stdc++.h>
+using namespace std;
+
+class Solution {
+public:
+    vector<int> twoSum(vector<int>& nums, int target) {
+        // Write your code here
+    }
+};$CPP$
+  ),
+  "driverCode" = jsonb_build_object(
+    'python3', $PY$import sys
+
+def _main():
+    data = sys.stdin.read().split()
+    n = int(data[0])
+    nums = [int(x) for x in data[1:1 + n]]
+    target = int(data[1 + n])
+    res = Solution().twoSum(nums, target)
+    print(res[0], res[1])
+
+_main()$PY$,
+    'javascript', $JS$const _d = require('fs').readFileSync(0, 'utf8').split(/\s+/).filter(Boolean).map(Number);
+const _n = _d[0];
+const _nums = _d.slice(1, 1 + _n);
+const _target = _d[1 + _n];
+const _res = twoSum(_nums, _target);
+console.log(_res[0] + " " + _res[1]);$JS$,
+    'cpp', $CPP$int main() {
+    int n;
+    if (!(cin >> n)) return 0;
+    vector<int> nums(n);
+    for (int i = 0; i < n; i++) cin >> nums[i];
+    int target; cin >> target;
+    vector<int> res = Solution().twoSum(nums, target);
+    cout << res[0] << " " << res[1] << endl;
+    return 0;
+}$CPP$
+  ),
+  "updatedAt" = NOW()
+WHERE slug = 'two-sum';
+
+-- ── Valid Parentheses ────────────────────────────────────────
+-- in : line1=s
+-- out: "true" | "false"
+UPDATE problems SET
+  "codeTemplates" = jsonb_build_object(
+    'python3', $PY$class Solution:
+    def isValid(self, s):
+        # Write your code here
+        pass$PY$,
+    'javascript', $JS$var isValid = function(s) {
+    // Write your code here
+};$JS$,
+    'cpp', $CPP$#include <bits/stdc++.h>
+using namespace std;
+
+class Solution {
+public:
+    bool isValid(string s) {
+        // Write your code here
+    }
+};$CPP$
+  ),
+  "driverCode" = jsonb_build_object(
+    'python3', $PY$import sys
+
+def _main():
+    s = sys.stdin.readline().rstrip("\n").rstrip("\r")
+    print("true" if Solution().isValid(s) else "false")
+
+_main()$PY$,
+    'javascript', $JS$const _s = require('fs').readFileSync(0, 'utf8').split('\n')[0].replace(/\r$/, '');
+console.log(isValid(_s) ? "true" : "false");$JS$,
+    'cpp', $CPP$int main() {
+    string s;
+    getline(cin, s);
+    cout << (Solution().isValid(s) ? "true" : "false") << endl;
+    return 0;
+}$CPP$
+  ),
+  "updatedAt" = NOW()
+WHERE slug = 'valid-parentheses';
+
+-- ── Palindrome Number ────────────────────────────────────────
+-- in : line1=x
+-- out: "true" | "false"
+UPDATE problems SET
+  "codeTemplates" = jsonb_build_object(
+    'python3', $PY$class Solution:
+    def isPalindrome(self, x):
+        # Write your code here
+        pass$PY$,
+    'javascript', $JS$var isPalindrome = function(x) {
+    // Write your code here
+};$JS$,
+    'cpp', $CPP$#include <bits/stdc++.h>
+using namespace std;
+
+class Solution {
+public:
+    bool isPalindrome(int x) {
+        // Write your code here
+    }
+};$CPP$
+  ),
+  "driverCode" = jsonb_build_object(
+    'python3', $PY$import sys
+
+def _main():
+    x = int(sys.stdin.read().split()[0])
+    print("true" if Solution().isPalindrome(x) else "false")
+
+_main()$PY$,
+    'javascript', $JS$const _x = parseInt(require('fs').readFileSync(0, 'utf8').trim(), 10);
+console.log(isPalindrome(_x) ? "true" : "false");$JS$,
+    'cpp', $CPP$int main() {
+    int x; cin >> x;
+    cout << (Solution().isPalindrome(x) ? "true" : "false") << endl;
+    return 0;
+}$CPP$
+  ),
+  "updatedAt" = NOW()
+WHERE slug = 'palindrome-number';
+
+-- ── Climbing Stairs ──────────────────────────────────────────
+-- in : line1=n
+-- out: integer
+UPDATE problems SET
+  "codeTemplates" = jsonb_build_object(
+    'python3', $PY$class Solution:
+    def climbStairs(self, n):
+        # Write your code here
+        pass$PY$,
+    'javascript', $JS$var climbStairs = function(n) {
+    // Write your code here
+};$JS$,
+    'cpp', $CPP$#include <bits/stdc++.h>
+using namespace std;
+
+class Solution {
+public:
+    int climbStairs(int n) {
+        // Write your code here
+    }
+};$CPP$
+  ),
+  "driverCode" = jsonb_build_object(
+    'python3', $PY$import sys
+
+def _main():
+    n = int(sys.stdin.read().split()[0])
+    print(Solution().climbStairs(n))
+
+_main()$PY$,
+    'javascript', $JS$const _n = parseInt(require('fs').readFileSync(0, 'utf8').trim(), 10);
+console.log(climbStairs(_n));$JS$,
+    'cpp', $CPP$int main() {
+    int n; cin >> n;
+    cout << Solution().climbStairs(n) << endl;
+    return 0;
+}$CPP$
+  ),
+  "updatedAt" = NOW()
+WHERE slug = 'climbing-stairs';
+
+-- ── Reverse Linked List ──────────────────────────────────────
+-- in : line1=space-separated node values (empty line => empty list)
+-- out: space-separated values of the reversed list
+UPDATE problems SET
+  "codeTemplates" = jsonb_build_object(
+    'python3', $PY$# Definition for singly-linked list:
+# class ListNode:
+#     def __init__(self, val=0, next=None):
+#         self.val = val
+#         self.next = next
+class Solution:
+    def reverseList(self, head):
+        # Write your code here
+        pass$PY$,
+    'javascript', $JS$// Definition for singly-linked list:
+// function ListNode(val, next) { this.val = val; this.next = next; }
+var reverseList = function(head) {
+    // Write your code here
+};$JS$,
+    'cpp', $CPP$#include <bits/stdc++.h>
+using namespace std;
+
+struct ListNode {
+    int val;
+    ListNode *next;
+    ListNode() : val(0), next(nullptr) {}
+    ListNode(int x) : val(x), next(nullptr) {}
+    ListNode(int x, ListNode *next) : val(x), next(next) {}
+};
+
+class Solution {
+public:
+    ListNode* reverseList(ListNode* head) {
+        // Write your code here
+    }
+};$CPP$
+  ),
+  "driverCode" = jsonb_build_object(
+    'python3', $PY$import sys
+
+class ListNode:
+    def __init__(self, val=0, next=None):
+        self.val = val
+        self.next = next
+
+def _main():
+    vals = [int(x) for x in sys.stdin.readline().split()]
+    head = None
+    for v in reversed(vals):
+        head = ListNode(v, head)
+    res = Solution().reverseList(head)
+    out = []
+    while res:
+        out.append(str(res.val))
+        res = res.next
+    print(" ".join(out))
+
+_main()$PY$,
+    'javascript', $JS$function ListNode(val, next) { this.val = (val === undefined ? 0 : val); this.next = (next === undefined ? null : next); }
+const _vals = require('fs').readFileSync(0, 'utf8').split('\n')[0].split(/\s+/).filter(Boolean).map(Number);
+let _head = null;
+for (let i = _vals.length - 1; i >= 0; i--) _head = new ListNode(_vals[i], _head);
+let _res = reverseList(_head);
+const _out = [];
+while (_res) { _out.push(_res.val); _res = _res.next; }
+console.log(_out.join(" "));$JS$,
+    'cpp', $CPP$int main() {
+    string line;
+    getline(cin, line);
+    istringstream iss(line);
+    vector<int> vals; int v;
+    while (iss >> v) vals.push_back(v);
+    ListNode* head = nullptr;
+    for (int i = (int)vals.size() - 1; i >= 0; i--) head = new ListNode(vals[i], head);
+    ListNode* res = Solution().reverseList(head);
+    string out;
+    while (res) { if (!out.empty()) out += " "; out += to_string(res->val); res = res->next; }
+    cout << out << endl;
+    return 0;
+}$CPP$
+  ),
+  "updatedAt" = NOW()
+WHERE slug = 'reverse-linked-list';
+
+-- ── Longest Substring Without Repeating Characters ───────────
+-- in : line1=s (may contain spaces; may be empty)
+-- out: integer
+UPDATE problems SET
+  "codeTemplates" = jsonb_build_object(
+    'python3', $PY$class Solution:
+    def lengthOfLongestSubstring(self, s):
+        # Write your code here
+        pass$PY$,
+    'javascript', $JS$var lengthOfLongestSubstring = function(s) {
+    // Write your code here
+};$JS$,
+    'cpp', $CPP$#include <bits/stdc++.h>
+using namespace std;
+
+class Solution {
+public:
+    int lengthOfLongestSubstring(string s) {
+        // Write your code here
+    }
+};$CPP$
+  ),
+  "driverCode" = jsonb_build_object(
+    'python3', $PY$import sys
+
+def _main():
+    s = sys.stdin.readline().rstrip("\n").rstrip("\r")
+    print(Solution().lengthOfLongestSubstring(s))
+
+_main()$PY$,
+    'javascript', $JS$const _s = require('fs').readFileSync(0, 'utf8').split('\n')[0].replace(/\r$/, '');
+console.log(lengthOfLongestSubstring(_s));$JS$,
+    'cpp', $CPP$int main() {
+    string s;
+    getline(cin, s);
+    cout << Solution().lengthOfLongestSubstring(s) << endl;
+    return 0;
+}$CPP$
+  ),
+  "updatedAt" = NOW()
+WHERE slug = 'longest-substring-without-repeating-characters';
+
+-- ── Add Two Numbers ──────────────────────────────────────────
+-- in : line1=l1 digits (space-sep) | line2=l2 digits (space-sep)
+-- out: space-separated digits of the sum list
+UPDATE problems SET
+  "codeTemplates" = jsonb_build_object(
+    'python3', $PY$# Definition for singly-linked list:
+# class ListNode:
+#     def __init__(self, val=0, next=None):
+#         self.val = val
+#         self.next = next
+class Solution:
+    def addTwoNumbers(self, l1, l2):
+        # Write your code here
+        pass$PY$,
+    'javascript', $JS$// Definition for singly-linked list:
+// function ListNode(val, next) { this.val = val; this.next = next; }
+var addTwoNumbers = function(l1, l2) {
+    // Write your code here
+};$JS$,
+    'cpp', $CPP$#include <bits/stdc++.h>
+using namespace std;
+
+struct ListNode {
+    int val;
+    ListNode *next;
+    ListNode() : val(0), next(nullptr) {}
+    ListNode(int x) : val(x), next(nullptr) {}
+    ListNode(int x, ListNode *next) : val(x), next(next) {}
+};
+
+class Solution {
+public:
+    ListNode* addTwoNumbers(ListNode* l1, ListNode* l2) {
+        // Write your code here
+    }
+};$CPP$
+  ),
+  "driverCode" = jsonb_build_object(
+    'python3', $PY$import sys
+
+class ListNode:
+    def __init__(self, val=0, next=None):
+        self.val = val
+        self.next = next
+
+def _build(vals):
+    head = None
+    for v in reversed(vals):
+        head = ListNode(v, head)
+    return head
+
+def _main():
+    lines = sys.stdin.read().split("\n")
+    l1 = _build([int(x) for x in lines[0].split()])
+    l2 = _build([int(x) for x in lines[1].split()])
+    res = Solution().addTwoNumbers(l1, l2)
+    out = []
+    while res:
+        out.append(str(res.val))
+        res = res.next
+    print(" ".join(out))
+
+_main()$PY$,
+    'javascript', $JS$function ListNode(val, next) { this.val = (val === undefined ? 0 : val); this.next = (next === undefined ? null : next); }
+function _build(vals) { let h = null; for (let i = vals.length - 1; i >= 0; i--) h = new ListNode(vals[i], h); return h; }
+const _lines = require('fs').readFileSync(0, 'utf8').split('\n');
+const _l1 = _build((_lines[0] || '').split(/\s+/).filter(Boolean).map(Number));
+const _l2 = _build((_lines[1] || '').split(/\s+/).filter(Boolean).map(Number));
+let _res = addTwoNumbers(_l1, _l2);
+const _out = [];
+while (_res) { _out.push(_res.val); _res = _res.next; }
+console.log(_out.join(" "));$JS$,
+    'cpp', $CPP$static ListNode* _build(const string& line) {
+    istringstream iss(line);
+    vector<int> vals; int v;
+    while (iss >> v) vals.push_back(v);
+    ListNode* head = nullptr;
+    for (int i = (int)vals.size() - 1; i >= 0; i--) head = new ListNode(vals[i], head);
+    return head;
+}
+
+int main() {
+    string a, b;
+    getline(cin, a);
+    getline(cin, b);
+    ListNode* res = Solution().addTwoNumbers(_build(a), _build(b));
+    string out;
+    while (res) { if (!out.empty()) out += " "; out += to_string(res->val); res = res->next; }
+    cout << out << endl;
+    return 0;
+}$CPP$
+  ),
+  "updatedAt" = NOW()
+WHERE slug = 'add-two-numbers';
+
+-- ── Container With Most Water ────────────────────────────────
+-- in : line1=n | line2=n ints (height)
+-- out: integer
+UPDATE problems SET
+  "codeTemplates" = jsonb_build_object(
+    'python3', $PY$class Solution:
+    def maxArea(self, height):
+        # Write your code here
+        pass$PY$,
+    'javascript', $JS$var maxArea = function(height) {
+    // Write your code here
+};$JS$,
+    'cpp', $CPP$#include <bits/stdc++.h>
+using namespace std;
+
+class Solution {
+public:
+    int maxArea(vector<int>& height) {
+        // Write your code here
+    }
+};$CPP$
+  ),
+  "driverCode" = jsonb_build_object(
+    'python3', $PY$import sys
+
+def _main():
+    data = sys.stdin.read().split()
+    n = int(data[0])
+    height = [int(x) for x in data[1:1 + n]]
+    print(Solution().maxArea(height))
+
+_main()$PY$,
+    'javascript', $JS$const _d = require('fs').readFileSync(0, 'utf8').split(/\s+/).filter(Boolean).map(Number);
+const _n = _d[0];
+const _height = _d.slice(1, 1 + _n);
+console.log(maxArea(_height));$JS$,
+    'cpp', $CPP$int main() {
+    int n; cin >> n;
+    vector<int> height(n);
+    for (int i = 0; i < n; i++) cin >> height[i];
+    cout << Solution().maxArea(height) << endl;
+    return 0;
+}$CPP$
+  ),
+  "updatedAt" = NOW()
+WHERE slug = 'container-with-most-water';
+
+-- ── 3Sum ─────────────────────────────────────────────────────
+-- in : line1=n | line2=n ints (nums)
+-- out: one triplet per line, ints space-separated.
+--      Driver normalizes: each triplet sorted asc, triplets sorted.
+UPDATE problems SET
+  "codeTemplates" = jsonb_build_object(
+    'python3', $PY$class Solution:
+    def threeSum(self, nums):
+        # Write your code here
+        pass$PY$,
+    'javascript', $JS$var threeSum = function(nums) {
+    // Write your code here
+};$JS$,
+    'cpp', $CPP$#include <bits/stdc++.h>
+using namespace std;
+
+class Solution {
+public:
+    vector<vector<int>> threeSum(vector<int>& nums) {
+        // Write your code here
+    }
+};$CPP$
+  ),
+  "driverCode" = jsonb_build_object(
+    'python3', $PY$import sys
+
+def _main():
+    data = sys.stdin.read().split()
+    n = int(data[0])
+    nums = [int(x) for x in data[1:1 + n]]
+    res = Solution().threeSum(nums)
+    for t in sorted(sorted(t) for t in res):
+        print(" ".join(str(x) for x in t))
+
+_main()$PY$,
+    'javascript', $JS$const _d = require('fs').readFileSync(0, 'utf8').split(/\s+/).filter(Boolean).map(Number);
+const _n = _d[0];
+const _nums = _d.slice(1, 1 + _n);
+let _res = threeSum(_nums).map(t => t.slice().sort((a, b) => a - b));
+_res.sort((a, b) => { for (let i = 0; i < a.length; i++) { if (a[i] !== b[i]) return a[i] - b[i]; } return 0; });
+console.log(_res.map(t => t.join(" ")).join("\n"));$JS$,
+    'cpp', $CPP$int main() {
+    int n; cin >> n;
+    vector<int> nums(n);
+    for (int i = 0; i < n; i++) cin >> nums[i];
+    vector<vector<int>> res = Solution().threeSum(nums);
+    for (auto& t : res) sort(t.begin(), t.end());
+    sort(res.begin(), res.end());
+    for (auto& t : res) {
+        for (size_t i = 0; i < t.size(); i++) { if (i) cout << " "; cout << t[i]; }
+        cout << "\n";
+    }
+    return 0;
+}$CPP$
+  ),
+  "updatedAt" = NOW()
+WHERE slug = 'three-sum';
+
+-- ── Median of Two Sorted Arrays ──────────────────────────────
+-- in : line1=m | line2=m ints (nums1) | line3=n | line4=n ints (nums2)
+-- out: median formatted to 5 decimals (e.g. "2.00000")
+UPDATE problems SET
+  "codeTemplates" = jsonb_build_object(
+    'python3', $PY$class Solution:
+    def findMedianSortedArrays(self, nums1, nums2):
+        # Write your code here
+        pass$PY$,
+    'javascript', $JS$var findMedianSortedArrays = function(nums1, nums2) {
+    // Write your code here
+};$JS$,
+    'cpp', $CPP$#include <bits/stdc++.h>
+using namespace std;
+
+class Solution {
+public:
+    double findMedianSortedArrays(vector<int>& nums1, vector<int>& nums2) {
+        // Write your code here
+    }
+};$CPP$
+  ),
+  "driverCode" = jsonb_build_object(
+    'python3', $PY$import sys
+
+def _main():
+    data = sys.stdin.read().split()
+    i = 0
+    m = int(data[i]); i += 1
+    nums1 = [int(x) for x in data[i:i + m]]; i += m
+    n = int(data[i]); i += 1
+    nums2 = [int(x) for x in data[i:i + n]]; i += n
+    print("%.5f" % Solution().findMedianSortedArrays(nums1, nums2))
+
+_main()$PY$,
+    'javascript', $JS$const _d = require('fs').readFileSync(0, 'utf8').split(/\s+/).filter(Boolean).map(Number);
+let _i = 0;
+const _m = _d[_i++];
+const _nums1 = _d.slice(_i, _i + _m); _i += _m;
+const _n = _d[_i++];
+const _nums2 = _d.slice(_i, _i + _n); _i += _n;
+console.log(findMedianSortedArrays(_nums1, _nums2).toFixed(5));$JS$,
+    'cpp', $CPP$int main() {
+    int m; cin >> m;
+    vector<int> nums1(m);
+    for (int i = 0; i < m; i++) cin >> nums1[i];
+    int n; cin >> n;
+    vector<int> nums2(n);
+    for (int i = 0; i < n; i++) cin >> nums2[i];
+    printf("%.5f\n", Solution().findMedianSortedArrays(nums1, nums2));
+    return 0;
+}$CPP$
+  ),
+  "updatedAt" = NOW()
+WHERE slug = 'median-of-two-sorted-arrays';
+
+-- ── Trapping Rain Water ──────────────────────────────────────
+-- in : line1=n | line2=n ints (height)
+-- out: integer
+UPDATE problems SET
+  "codeTemplates" = jsonb_build_object(
+    'python3', $PY$class Solution:
+    def trap(self, height):
+        # Write your code here
+        pass$PY$,
+    'javascript', $JS$var trap = function(height) {
+    // Write your code here
+};$JS$,
+    'cpp', $CPP$#include <bits/stdc++.h>
+using namespace std;
+
+class Solution {
+public:
+    int trap(vector<int>& height) {
+        // Write your code here
+    }
+};$CPP$
+  ),
+  "driverCode" = jsonb_build_object(
+    'python3', $PY$import sys
+
+def _main():
+    data = sys.stdin.read().split()
+    n = int(data[0])
+    height = [int(x) for x in data[1:1 + n]]
+    print(Solution().trap(height))
+
+_main()$PY$,
+    'javascript', $JS$const _d = require('fs').readFileSync(0, 'utf8').split(/\s+/).filter(Boolean).map(Number);
+const _n = _d[0];
+const _height = _d.slice(1, 1 + _n);
+console.log(trap(_height));$JS$,
+    'cpp', $CPP$int main() {
+    int n; cin >> n;
+    vector<int> height(n);
+    for (int i = 0; i < n; i++) cin >> height[i];
+    cout << Solution().trap(height) << endl;
+    return 0;
+}$CPP$
+  ),
+  "updatedAt" = NOW()
+WHERE slug = 'trapping-rain-water';
+
+-- ── Word Break II ────────────────────────────────────────────
+-- in : line1=s | line2=wordDict (space-separated words)
+-- out: one sentence per line. Driver normalizes: sentences sorted.
+UPDATE problems SET
+  "codeTemplates" = jsonb_build_object(
+    'python3', $PY$class Solution:
+    def wordBreak(self, s, wordDict):
+        # Write your code here
+        pass$PY$,
+    'javascript', $JS$var wordBreak = function(s, wordDict) {
+    // Write your code here
+};$JS$,
+    'cpp', $CPP$#include <bits/stdc++.h>
+using namespace std;
+
+class Solution {
+public:
+    vector<string> wordBreak(string s, vector<string>& wordDict) {
+        // Write your code here
+    }
+};$CPP$
+  ),
+  "driverCode" = jsonb_build_object(
+    'python3', $PY$import sys
+
+def _main():
+    lines = sys.stdin.read().split("\n")
+    s = lines[0].strip()
+    wordDict = lines[1].split() if len(lines) > 1 else []
+    res = Solution().wordBreak(s, wordDict)
+    for sentence in sorted(res):
+        print(sentence)
+
+_main()$PY$,
+    'javascript', $JS$const _lines = require('fs').readFileSync(0, 'utf8').split('\n');
+const _s = _lines[0].trim();
+const _wordDict = (_lines[1] || '').split(/\s+/).filter(Boolean);
+const _res = wordBreak(_s, _wordDict).slice().sort();
+console.log(_res.join("\n"));$JS$,
+    'cpp', $CPP$int main() {
+    string s;
+    getline(cin, s);
+    string line;
+    getline(cin, line);
+    istringstream iss(line);
+    vector<string> wordDict; string w;
+    while (iss >> w) wordDict.push_back(w);
+    vector<string> res = Solution().wordBreak(s, wordDict);
+    sort(res.begin(), res.end());
+    for (auto& r : res) cout << r << "\n";
+    return 0;
+}$CPP$
+  ),
+  "updatedAt" = NOW()
+WHERE slug = 'word-break-ii';
+
+COMMIT;

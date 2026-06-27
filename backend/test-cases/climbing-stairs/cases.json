@@ -1,0 +1,56 @@
+[
+  {
+    "id": 1,
+    "input": "1",
+    "expectedOutput": "1",
+    "explanation": "n = 1 -> 1 distinct ways"
+  },
+  {
+    "id": 2,
+    "input": "2",
+    "expectedOutput": "2",
+    "explanation": "n = 2 -> 2 distinct ways"
+  },
+  {
+    "id": 3,
+    "input": "3",
+    "expectedOutput": "3",
+    "explanation": "n = 3 -> 3 distinct ways"
+  },
+  {
+    "id": 4,
+    "input": "4",
+    "expectedOutput": "5",
+    "explanation": "n = 4 -> 5 distinct ways"
+  },
+  {
+    "id": 5,
+    "input": "5",
+    "expectedOutput": "8",
+    "explanation": "n = 5 -> 8 distinct ways"
+  },
+  {
+    "id": 6,
+    "input": "10",
+    "expectedOutput": "89",
+    "explanation": "n = 10 -> 89 distinct ways"
+  },
+  {
+    "id": 7,
+    "input": "20",
+    "expectedOutput": "10946",
+    "explanation": "n = 20 -> 10946 distinct ways"
+  },
+  {
+    "id": 8,
+    "input": "30",
+    "expectedOutput": "1346269",
+    "explanation": "n = 30 -> 1346269 distinct ways"
+  },
+  {
+    "id": 9,
+    "input": "45",
+    "expectedOutput": "1836311903",
+    "explanation": "n = 45 -> 1836311903 distinct ways"
+  }
+]

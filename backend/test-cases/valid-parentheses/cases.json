@@ -1,0 +1,68 @@
+[
+  {
+    "id": 1,
+    "input": "()",
+    "expectedOutput": "true",
+    "explanation": "s = \"()\" -> true"
+  },
+  {
+    "id": 2,
+    "input": "()[]{}",
+    "expectedOutput": "true",
+    "explanation": "s = \"()[]{}\" -> true"
+  },
+  {
+    "id": 3,
+    "input": "(]",
+    "expectedOutput": "false",
+    "explanation": "s = \"(]\" -> false"
+  },
+  {
+    "id": 4,
+    "input": "([)]",
+    "expectedOutput": "false",
+    "explanation": "s = \"([)]\" -> false"
+  },
+  {
+    "id": 5,
+    "input": "{[]}",
+    "expectedOutput": "true",
+    "explanation": "s = \"{[]}\" -> true"
+  },
+  {
+    "id": 6,
+    "input": "(",
+    "expectedOutput": "false",
+    "explanation": "s = \"(\" -> false"
+  },
+  {
+    "id": 7,
+    "input": "]",
+    "expectedOutput": "false",
+    "explanation": "s = \"]\" -> false"
+  },
+  {
+    "id": 8,
+    "input": "((()))",
+    "expectedOutput": "true",
+    "explanation": "s = \"((()))\" -> true"
+  },
+  {
+    "id": 9,
+    "input": "((",
+    "expectedOutput": "false",
+    "explanation": "s = \"((\" -> false"
+  },
+  {
+    "id": 10,
+    "input": "([{}])",
+    "expectedOutput": "true",
+    "explanation": "s = \"([{}])\" -> true"
+  },
+  {
+    "id": 11,
+    "input": "){",
+    "expectedOutput": "false",
+    "explanation": "s = \"){\" -> false"
+  }
+]

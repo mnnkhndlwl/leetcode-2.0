@@ -1,0 +1,62 @@
+[
+  {
+    "id": 1,
+    "input": "abcabcbb",
+    "expectedOutput": "3",
+    "explanation": "s = \"abcabcbb\" -> longest length 3"
+  },
+  {
+    "id": 2,
+    "input": "bbbbb",
+    "expectedOutput": "1",
+    "explanation": "s = \"bbbbb\" -> longest length 1"
+  },
+  {
+    "id": 3,
+    "input": "pwwkew",
+    "expectedOutput": "3",
+    "explanation": "s = \"pwwkew\" -> longest length 3"
+  },
+  {
+    "id": 4,
+    "input": "",
+    "expectedOutput": "0",
+    "explanation": "s = \"\" -> longest length 0"
+  },
+  {
+    "id": 5,
+    "input": "abcdef",
+    "expectedOutput": "6",
+    "explanation": "s = \"abcdef\" -> longest length 6"
+  },
+  {
+    "id": 6,
+    "input": "dvdf",
+    "expectedOutput": "3",
+    "explanation": "s = \"dvdf\" -> longest length 3"
+  },
+  {
+    "id": 7,
+    "input": " ",
+    "expectedOutput": "1",
+    "explanation": "s = \" \" -> longest length 1"
+  },
+  {
+    "id": 8,
+    "input": "au",
+    "expectedOutput": "2",
+    "explanation": "s = \"au\" -> longest length 2"
+  },
+  {
+    "id": 9,
+    "input": "tmmzuxt",
+    "expectedOutput": "5",
+    "explanation": "s = \"tmmzuxt\" -> longest length 5"
+  },
+  {
+    "id": 10,
+    "input": "abba",
+    "expectedOutput": "2",
+    "explanation": "s = \"abba\" -> longest length 2"
+  }
+]

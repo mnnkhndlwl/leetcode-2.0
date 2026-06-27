@@ -1,0 +1,50 @@
+[
+  {
+    "id": 1,
+    "input": "1 2 3 4 5",
+    "expectedOutput": "5 4 3 2 1",
+    "explanation": "[1,2,3,4,5] reversed -> [5,4,3,2,1]"
+  },
+  {
+    "id": 2,
+    "input": "1 2",
+    "expectedOutput": "2 1",
+    "explanation": "[1,2] reversed -> [2,1]"
+  },
+  {
+    "id": 3,
+    "input": "",
+    "expectedOutput": "",
+    "explanation": "[] reversed -> []"
+  },
+  {
+    "id": 4,
+    "input": "1",
+    "expectedOutput": "1",
+    "explanation": "[1] reversed -> [1]"
+  },
+  {
+    "id": 5,
+    "input": "5 4 3 2 1",
+    "expectedOutput": "1 2 3 4 5",
+    "explanation": "[5,4,3,2,1] reversed -> [1,2,3,4,5]"
+  },
+  {
+    "id": 6,
+    "input": "-5 0 5",
+    "expectedOutput": "5 0 -5",
+    "explanation": "[-5,0,5] reversed -> [5,0,-5]"
+  },
+  {
+    "id": 7,
+    "input": "1 1 2 2",
+    "expectedOutput": "2 2 1 1",
+    "explanation": "[1,1,2,2] reversed -> [2,2,1,1]"
+  },
+  {
+    "id": 8,
+    "input": "3 7 9 1 4 6",
+    "expectedOutput": "6 4 1 9 7 3",
+    "explanation": "[3,7,9,1,4,6] reversed -> [6,4,1,9,7,3]"
+  }
+]

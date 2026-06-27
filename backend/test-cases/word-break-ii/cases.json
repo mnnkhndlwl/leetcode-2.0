@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "input": "catsanddog\ncat cats and sand dog",
+    "expectedOutput": "cat sand dog\ncats and dog",
+    "explanation": "2 valid segmentation(s)"
+  },
+  {
+    "id": 2,
+    "input": "pineapplepenapple\napple pen applepen pine pineapple",
+    "expectedOutput": "pine apple pen apple\npine applepen apple\npineapple pen apple",
+    "explanation": "3 valid segmentation(s)"
+  },
+  {
+    "id": 3,
+    "input": "catsandog\ncats dog sand and cat",
+    "expectedOutput": "",
+    "explanation": "no valid segmentation"
+  },
+  {
+    "id": 4,
+    "input": "aaa\na aa",
+    "expectedOutput": "a a a\na aa\naa a",
+    "explanation": "3 valid segmentation(s)"
+  }
+]

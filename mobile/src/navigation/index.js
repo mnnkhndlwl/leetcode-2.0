@@ -8,6 +8,8 @@ import AppStack from "./AppStack";
 export default function Navigation() {
   const user = useUserStore((s) => s.user);
 
+  console.log("user", user);
+
   return (
     <NavigationContainer>
       {user ? <AppStack /> : <AuthStack />}

@@ -20,6 +20,7 @@ export const getProblem = async (req, res) => {
       totalSubmissions: problems.totalSubmissions,
       totalAccepted: problems.totalAccepted,
       codeTemplates: problems.codeTemplates,
+      driverCode: problems.driverCode,
       createdAt: problems.createdAt,
       updatedAt: problems.updatedAt,
     })
