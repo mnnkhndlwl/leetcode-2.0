@@ -7,9 +7,11 @@ import {
   boolean,
   timestamp,
   index,
+  uniqueIndex,
   primaryKey,
   text,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 export const users = pgTable(
   "users",
@@ -101,12 +103,20 @@ export const submissions = pgTable(
     memoryUsedMb: integer("memoryUsedMb"),
     compileError: text("compileError"),
     testCaseResults: jsonb("testCaseResults"),
+    // Client-supplied key that makes POST /submissions safe to retry.
+    idempotencyKey: varchar("idempotencyKey", { length: 255 }),
+    // SHA-256 of the request payload — detects reuse of a key with different code.
+    requestHash: varchar("requestHash", { length: 64 }),
     createdAt: timestamp("createdAt").defaultNow(),
     updatedAt: timestamp("updatedAt").defaultNow(),
   },
   (table) => [
     index("idx_submissions_problemId").on(table.problemId),
     index("idx_submissions_userId").on(table.userId),
+    // One submission per (user, key). Partial so rows without a key are unconstrained.
+    uniqueIndex("uq_submissions_user_idem")
+      .on(table.userId, table.idempotencyKey)
+      .where(sql`"idempotencyKey" IS NOT NULL`),
   ],
 );
 

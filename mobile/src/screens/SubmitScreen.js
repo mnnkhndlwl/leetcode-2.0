@@ -15,7 +15,7 @@ import CodeEditor, {
 } from "@rivascva/react-native-code-editor";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { getProblem } from "../api/problems";
-import { submitCode } from "../api/submissions";
+import { submitCode, newIdempotencyKey } from "../api/submissions";
 import { useSubmissionWatcher } from "../hooks/useSubmissionWatcher";
 
 // Labels for the codeTemplates/SUPPORTED_LANGUAGES keys.
@@ -93,10 +93,13 @@ export default function SubmitScreen({ route }) {
 
   function handleSubmit() {
     if (!problem || !lang) return;
+    // Generate the key once per tap; React Query reuses these variables across
+    // automatic retries, so a retried POST maps to the same submission.
     submitMutation.mutate({
       problemId: problem.id,
       language: lang,
       code,
+      idempotencyKey: newIdempotencyKey(),
     });
   }
 

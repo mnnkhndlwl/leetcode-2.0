@@ -29,6 +29,20 @@
       "when": 1748694100000,
       "tag": "0003_function_only_submission",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1748694200000,
+      "tag": "0004_submission_idempotency_key",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1748694300000,
+      "tag": "0005_submission_request_hash",
+      "breakpoints": true
     }
   ]
 }
