@@ -1,7 +1,7 @@
-export const SUPPORTED_LANGUAGES = ["python", "javascript", "cpp", "java", "go"];
+export const SUPPORTED_LANGUAGES = ["python3", "javascript", "cpp", "java", "go"];
 
 export const LANGUAGE_LABELS = {
-  python: "Python 3",
+  python3: "Python 3",
   javascript: "JavaScript (Node.js)",
   cpp: "C++ 17",
   java: "Java 21",

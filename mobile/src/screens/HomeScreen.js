@@ -26,7 +26,7 @@ const DIFFICULTY_BARS = [
 
 const DIFFICULTY_COLOR = { Easy: "#00b8a3", Medium: "#ffa116", Hard: "#ef4743" };
 
-export default function HomeScreen() {
+export default function HomeScreen({ navigation }) {
   const user = useUserStore((s) => s.user);
   const logout = useUserStore((s) => s.logout);
 
@@ -129,6 +129,9 @@ export default function HomeScreen() {
                 i === problems.length - 1 && styles.problemRowLast,
               ]}
               activeOpacity={0.7}
+              onPress={() =>
+                navigation.navigate("Submit", { slug: p.slug, title: p.title })
+              }
             >
               <View style={styles.problemLeft}>
                 <View

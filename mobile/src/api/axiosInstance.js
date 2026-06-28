@@ -1,11 +1,10 @@
 import axios from "axios";
 import useUserStore from "../store/useUserStore";
 import { queryClient } from "./queryClient";
-
-const BASE_URL = "https://3a01-110-235-239-53.ngrok-free.app";
+import { API_URL } from "../config";
 
 const api = axios.create({
-  baseURL: BASE_URL,
+  baseURL: API_URL,
   headers: { "Content-Type": "application/json" },
 });
 

@@ -120,9 +120,10 @@ func (j *Judge) Run(msg models.SubmissionMessage) (models.JudgeResult, error) {
 	image := j.imageFor(msg.Language)
 	overallStatus := "ACCEPTED"
 	var maxRuntimeMs int64
+	var errorOutput string // stderr from the first failing test case (runtime/compile errors)
 
 	for _, tc := range testCases {
-		tcResult, status := runTestCase(image, codeDir, tc, msg)
+		tcResult, status, stderr := runTestCase(image, codeDir, tc, msg)
 		result.TestCaseResults = append(result.TestCaseResults, tcResult)
 
 		if tcResult.RuntimeMs > maxRuntimeMs {
@@ -130,6 +131,7 @@ func (j *Judge) Run(msg models.SubmissionMessage) (models.JudgeResult, error) {
 		}
 		if status != "ACCEPTED" && overallStatus == "ACCEPTED" {
 			overallStatus = status
+			errorOutput = stderr
 		}
 		if tcResult.Passed {
 			result.PassedCount++
@@ -138,10 +140,22 @@ func (j *Judge) Run(msg models.SubmissionMessage) (models.JudgeResult, error) {
 
 	result.Status = overallStatus
 	result.RuntimeMs = maxRuntimeMs
+
+	// Surface the captured stderr so the client can show the actual error.
+	if errorOutput != "" {
+		const maxLen = 4000
+		if len(errorOutput) > maxLen {
+			errorOutput = errorOutput[:maxLen] + "\n...(truncated)"
+		}
+		result.CompileError = errorOutput
+	}
+
 	return result, nil
 }
 
-func runTestCase(image, codeDir string, tc s3client.TestCase, msg models.SubmissionMessage) (models.TestCaseResult, string) {
+// runTestCase returns the per-case result, the verdict status, and (for error
+// verdicts) the program's stderr so the caller can surface it to the client.
+func runTestCase(image, codeDir string, tc s3client.TestCase, msg models.SubmissionMessage) (models.TestCaseResult, string, string) {
 	// wall-clock timeout = problem limit + 2s grace
 	timeout := time.Duration(msg.TimeLimitMs+2000) * time.Millisecond
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -176,26 +190,27 @@ func runTestCase(image, codeDir string, tc s3client.TestCase, msg models.Submiss
 	}
 
 	if ctx.Err() == context.DeadlineExceeded {
-		return tcResult, "TIME_LIMIT_EXCEEDED"
+		return tcResult, "TIME_LIMIT_EXCEEDED", ""
 	}
 
 	if runErr != nil {
 		if exitErr, ok := runErr.(*exec.ExitError); ok {
 			// OOM kill — Linux sends SIGKILL → exit 137 (128 + 9)
 			if exitErr.ExitCode() == 137 {
-				return tcResult, "MEMORY_LIMIT_EXCEEDED"
+				return tcResult, "MEMORY_LIMIT_EXCEEDED", ""
 			}
 		}
-		if stderr.Len() > 0 {
-			log.Printf("submission %s tc %d stderr: %s", msg.SubmissionID, tc.ID, stderr.String())
+		errOutput := strings.TrimSpace(stderr.String())
+		if errOutput != "" {
+			log.Printf("submission %s tc %d stderr: %s", msg.SubmissionID, tc.ID, errOutput)
 		}
-		return tcResult, "RUNTIME_ERROR"
+		return tcResult, "RUNTIME_ERROR", errOutput
 	}
 
 	if strings.TrimSpace(stdout.String()) == strings.TrimSpace(tc.ExpectedOutput) {
 		tcResult.Passed = true
-		return tcResult, "ACCEPTED"
+		return tcResult, "ACCEPTED", ""
 	}
 
-	return tcResult, "WRONG_ANSWER"
+	return tcResult, "WRONG_ANSWER", ""
 }
