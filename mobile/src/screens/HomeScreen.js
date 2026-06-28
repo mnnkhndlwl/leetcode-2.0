@@ -4,9 +4,13 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  ActivityIndicator,
   Alert,
 } from "react-native";
+import { useQuery } from "@tanstack/react-query";
 import useUserStore from "../store/useUserStore";
+import { getProblems } from "../api/problems";
+import { queryClient } from "../api/queryClient";
 
 const STATS = [
   { label: "Solved", value: "0", color: "#00b8a3" },
@@ -20,17 +24,20 @@ const DIFFICULTY_BARS = [
   { label: "Hard", count: 0, total: 790, color: "#ef4743" },
 ];
 
-const EXPLORE_PROBLEMS = [
-  { title: "Two Sum", difficulty: "Easy" },
-  { title: "Add Two Numbers", difficulty: "Medium" },
-  { title: "Longest Substring Without Repeating Characters", difficulty: "Medium" },
-];
-
 const DIFFICULTY_COLOR = { Easy: "#00b8a3", Medium: "#ffa116", Hard: "#ef4743" };
 
 export default function HomeScreen() {
   const user = useUserStore((s) => s.user);
   const logout = useUserStore((s) => s.logout);
+
+  const {
+    data: problems,
+    isLoading: problemsLoading,
+    isError: problemsError,
+  } = useQuery({
+    queryKey: ["problems"],
+    queryFn: getProblems,
+  });
 
   function handleLogout() {
     Alert.alert("Log out", "Are you sure you want to log out?", [
@@ -38,8 +45,10 @@ export default function HomeScreen() {
       {
         text: "Log out",
         style: "destructive",
-        onPress: logout,
-        // Clearing user in store switches navigation to AuthStack automatically
+        onPress: () => {
+          logout(); // clears persisted auth -> navigation switches to AuthStack
+          queryClient.clear(); // drop cached server data for the logged-out user
+        },
       },
     ]);
   }
@@ -105,36 +114,46 @@ export default function HomeScreen() {
       {/* Explore */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Explore Problems</Text>
-        {EXPLORE_PROBLEMS.map((p, i) => (
-          <TouchableOpacity
-            key={p.title}
-            style={[
-              styles.problemRow,
-              i === EXPLORE_PROBLEMS.length - 1 && styles.problemRowLast,
-            ]}
-            activeOpacity={0.7}
-          >
-            <View style={styles.problemLeft}>
-              <View
-                style={[
-                  styles.dot,
-                  { backgroundColor: DIFFICULTY_COLOR[p.difficulty] },
-                ]}
-              />
-              <Text style={styles.problemTitle} numberOfLines={1}>
-                {p.title}
-              </Text>
-            </View>
-            <Text
+        {problemsLoading ? (
+          <ActivityIndicator color="#ffa116" style={styles.problemsState} />
+        ) : problemsError ? (
+          <Text style={styles.problemsStateText}>
+            Couldn't load problems. Pull to refresh later.
+          </Text>
+        ) : problems?.length ? (
+          problems.map((p, i) => (
+            <TouchableOpacity
+              key={p.id}
               style={[
-                styles.problemDifficulty,
-                { color: DIFFICULTY_COLOR[p.difficulty] },
+                styles.problemRow,
+                i === problems.length - 1 && styles.problemRowLast,
               ]}
+              activeOpacity={0.7}
             >
-              {p.difficulty}
-            </Text>
-          </TouchableOpacity>
-        ))}
+              <View style={styles.problemLeft}>
+                <View
+                  style={[
+                    styles.dot,
+                    { backgroundColor: DIFFICULTY_COLOR[p.difficulty] },
+                  ]}
+                />
+                <Text style={styles.problemTitle} numberOfLines={1}>
+                  {p.title}
+                </Text>
+              </View>
+              <Text
+                style={[
+                  styles.problemDifficulty,
+                  { color: DIFFICULTY_COLOR[p.difficulty] },
+                ]}
+              >
+                {p.difficulty}
+              </Text>
+            </TouchableOpacity>
+          ))
+        ) : (
+          <Text style={styles.problemsStateText}>No problems yet.</Text>
+        )}
       </View>
     </ScrollView>
   );
@@ -226,6 +245,8 @@ const styles = StyleSheet.create({
     borderBottomColor: "#2a2a40",
   },
   problemRowLast: { borderBottomWidth: 0 },
+  problemsState: { paddingVertical: 16 },
+  problemsStateText: { color: "#6b6b80", fontSize: 14, paddingVertical: 12 },
   problemLeft: { flexDirection: "row", alignItems: "center", flex: 1, gap: 10 },
   dot: { width: 8, height: 8, borderRadius: 4 },
   problemTitle: { color: "#c8c8d8", fontSize: 14, flex: 1 },

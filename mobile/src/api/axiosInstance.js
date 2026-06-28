@@ -1,6 +1,6 @@
 import axios from "axios";
-import { Platform } from "react-native";
 import useUserStore from "../store/useUserStore";
+import { queryClient } from "./queryClient";
 
 const BASE_URL = "https://3a01-110-235-239-53.ngrok-free.app";
 
@@ -25,6 +25,7 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       useUserStore.getState().logout();
+      queryClient.clear(); // drop cached server data for the logged-out user
     }
     return Promise.reject(error);
   }

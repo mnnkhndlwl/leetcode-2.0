@@ -1,7 +1,24 @@
 import { db } from "../db/index.js";
 import { problems } from "../db/schema.js";
-import { eq } from "drizzle-orm";
+import { eq, asc } from "drizzle-orm";
 import { HTTP } from "../constants/http.js";
+
+export const getProblems = async (_req, res) => {
+  const list = await db
+    .select({
+      id: problems.id,
+      title: problems.title,
+      difficulty: problems.difficulty,
+      slug: problems.slug,
+      totalSubmissions: problems.totalSubmissions,
+      totalAccepted: problems.totalAccepted,
+    })
+    .from(problems)
+    .where(eq(problems.visibility, "PUBLIC"))
+    .orderBy(asc(problems.createdAt));
+
+  return res.status(HTTP.OK).json(list);
+};
 
 export const getProblem = async (req, res) => {
   const { slug } = req.params;
