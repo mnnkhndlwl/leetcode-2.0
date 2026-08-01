@@ -109,6 +109,7 @@ export const submissions = pgTable(
     requestHash: varchar("requestHash", { length: 64 }),
     createdAt: timestamp("createdAt").defaultNow(),
     updatedAt: timestamp("updatedAt").defaultNow(),
+    contestId : uuid("contestId").references(() => contest.id),
   },
   (table) => [
     index("idx_submissions_problemId").on(table.problemId),
@@ -117,6 +118,7 @@ export const submissions = pgTable(
     uniqueIndex("uq_submissions_user_idem")
       .on(table.userId, table.idempotencyKey)
       .where(sql`"idempotencyKey" IS NOT NULL`),
+    index("idx_submissions_contestId").on(table.contestId),
   ],
 );
 
@@ -133,3 +135,51 @@ export const userProblemStatus = pgTable(
 );
 
 // TODO :  ADD CONTEST TABLE AND RELATED TABLES , HINT TABLE , EDITORIAL TABLE , COMMENT TABLE , CONTEST ENTRY TABLE
+export const contest = pgTable(
+  "contest" , {
+    id : uuid("id").primaryKey().defaultRandom(),
+    title : varchar("title", { length: 255 }).notNull(),
+    description : text("description").notNull(),
+    slug : text("slug").notNull().unique(),
+    startsAt : timestamp("startsAt").notNull(),
+    endsAt : timestamp("endsAt").notNull(),
+    registrationStartsAt : timestamp("registrationStartsAt").notNull(),
+    registrationEndsAt : timestamp("registrationEndsAt").notNull(),
+    status : varchar("status", { length: 255 }).notNull().default("DRAFT"),
+    createdByUserId : uuid("createdByUserId").references(() => users.id),
+    createdAt : timestamp("createdAt").defaultNow(),
+    updatedAt : timestamp("updatedAt").defaultNow(),
+  }
+)
+
+export const contestProblems = pgTable(
+  "contestProblems",
+  {
+    contestId : uuid("contestId").references(() => contest.id),
+    problemId : uuid("problemId").references(() => problems.id),
+    displayOrder : integer("displayOrder").notNull().default(0),
+    createdAt : timestamp("createdAt").defaultNow(),
+    updatedAt : timestamp("updatedAt").defaultNow(),
+    isVisible : boolean("isVisible").notNull().default(true),
+    points : integer("points").notNull().default(0),
+  },
+  (table) => [primaryKey({ columns: [table.contestId, table.problemId] })],
+);
+
+export const contestParticipants = pgTable(
+  "contestParticipants",
+  {
+    contestId : uuid("contestId").references(() => contest.id),
+    userId : uuid("userId").references(() => users.id),
+    registeredAt : timestamp("registeredAt").defaultNow(),
+    joinedAt : timestamp("joinedAt"),
+    lastActivityAt : timestamp("lastActivityAt"),
+    totalScore : integer("totalScore").notNull().default(0),
+    totalPenalty : integer("totalPenalty").notNull().default(0),
+    rank : integer("rank").notNull().default(0),
+    createdAt : timestamp("createdAt").defaultNow(),
+    updatedAt : timestamp("updatedAt").defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.contestId, table.userId] })],
+);
+
