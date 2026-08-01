@@ -1,33 +1,31 @@
 # ── Build stage ────────────────────────────────────────────────────────────────
-FROM golang:1.24-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Download dependencies first (layer-cached unless go.mod/go.sum change)
-COPY go.mod go.sum ./
-RUN go mod download
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
 
 COPY . .
 
-# Statically link so the binary runs in a minimal runtime image
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /judge-worker ./cmd/worker
-
 # ── Runtime stage ──────────────────────────────────────────────────────────────
-FROM alpine:3.20
+FROM node:22-alpine
 
 # docker CLI — needed to spawn per-submission containers
-RUN apk add --no-cache ca-certificates docker-cli
+RUN apk add --no-cache docker-cli
 
 WORKDIR /app
 
-COPY --from=builder /judge-worker .
+COPY --from=builder /app/node_modules ./node_modules
+COPY package.json ./
+COPY main.js config.js health.js judge.js queue.js s3.js ./
 
 # Health check that ECS/ALB can use
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget -qO- http://localhost:8080/health || exit 1
+  CMD node -e "fetch('http://127.0.0.1:8080/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 EXPOSE 8080
 
 # The Docker daemon socket must be bind-mounted at runtime:
 #   docker run -v /var/run/docker.sock:/var/run/docker.sock ...
-CMD ["./judge-worker"]
+CMD ["node", "main.js"]

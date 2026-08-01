@@ -1,6 +1,6 @@
 # LeetCode 2.0
 
-A full-stack competitive-programming platform: a React Native mobile app where users solve coding problems, submit solutions, and get **live judging verdicts** streamed back over WebSockets. Submissions are executed in sandboxed Docker containers by a horizontally-scalable Go judge worker.
+A full-stack competitive-programming platform: a React Native mobile app where users solve coding problems, submit solutions, and get **live judging verdicts** streamed back over WebSockets. Submissions are executed in sandboxed Docker containers by a horizontally-scalable Node judge worker.
 
 ---
 
@@ -14,7 +14,7 @@ flowchart LR
   M -- socket: watch:submission --> W[ws-server<br/>Socket.IO :3001]
 
   B -- enqueue --> SQ[(SQS submission queue)]
-  SQ --> J[judge-worker<br/>Go + Docker]
+  SQ --> J[judge-worker<br/>Node + Docker]
   J -- run code in<br/>per-language container --> J
   J -- fetch test cases --> S3[(S3 bucket)]
   J -- enqueue verdict --> RQ[(SQS result queue)]
@@ -44,7 +44,7 @@ flowchart LR
 | --- | --- |
 | Mobile | React Native 0.85 (New Arch), Zustand + MMKV, TanStack Query, Socket.IO client |
 | Backend API | Node/Express, Drizzle ORM, Zod, JWT, AWS SDK (SQS) |
-| Judge worker | Go 1.22, Docker, AWS SDK (SQS, S3) |
+| Judge worker | Node, Docker, AWS SDK (SQS, S3) |
 | Results consumer | Node, AWS SDK (SQS), ioredis, Drizzle |
 | WS server | Node, Socket.IO, ioredis, JWT, Drizzle |
 | Data | PostgreSQL (Neon or local), Redis, AWS SQS (×2 FIFO), AWS S3 |
@@ -56,7 +56,7 @@ flowchart LR
 ```
 leetcode-2.0/
 ├── backend/           Express API — auth, problems, submissions, DB migrations + seed
-├── judge-worker/      Go service — runs submissions in Docker sandboxes (per-language images)
+├── judge-worker/      Node service — runs submissions in Docker sandboxes (per-language images)
 ├── results-consumer/  Node — writes verdicts to DB + publishes to Redis
 ├── ws-server/         Node Socket.IO — streams verdicts to clients
 └── mobile/            React Native app
@@ -67,7 +67,6 @@ leetcode-2.0/
 ## Prerequisites
 
 - **Node.js ≥ 22.11**
-- **Go ≥ 1.22** (for the judge worker)
 - **Docker** (judge worker runs each submission in a container)
 - **PostgreSQL** (local, or a managed Neon database)
 - **Redis** (local `redis-server`, Docker, or managed)
@@ -163,7 +162,8 @@ VISIBILITY_TIMEOUT_SECONDS=60
 Run it (Docker must be running):
 
 ```bash
-go run ./cmd/worker          # or: go build -o judge ./cmd/worker && ./judge
+npm install
+npm start
 ```
 
 A health endpoint is served on `:8080`.
