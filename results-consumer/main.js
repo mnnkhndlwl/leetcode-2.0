@@ -8,13 +8,14 @@ import Redis from "ioredis";
 import { eq } from "drizzle-orm";
 import { db } from "./db.js";
 import { submissions } from "./schema.js";
+import { updateContestScore } from "./updateContestScore.js";
 
 // Redis publisher — used to notify the ws-server that a verdict is ready.
 // This is best-effort: the DB write is the source of truth. If Redis is down
 // the client falls back to the already-judged path in the ws-server (DB query).
 const redis = new Redis(process.env.REDIS_URL);
 redis.on("error", (err) =>
-  console.error("[redis] connection error:", err.message)
+  console.error("[redis] connection error:", err.message),
 );
 
 const sqs = new SQSClient({
@@ -32,7 +33,7 @@ const QUEUE_URL = process.env.SQS_RESULT_QUEUE_URL;
 // error we deliberately leave the message in the queue, so this is also the
 // retry delay before SQS redelivers (and eventually routes it to the DLQ).
 const VISIBILITY_TIMEOUT_SECONDS = Number(
-  process.env.VISIBILITY_TIMEOUT_SECONDS ?? 60
+  process.env.VISIBILITY_TIMEOUT_SECONDS ?? 60,
 );
 
 /**
@@ -68,7 +69,13 @@ async function handleResult(result) {
   // Idempotency guard — SQS delivers at-least-once, so check current status first.
   // If it's already a final verdict, a previous delivery already processed this message.
   const [submission] = await db
-    .select({ status: submissions.status })
+    .select({
+      status: submissions.status,
+      contestId: submissions.contestId,
+      problemId: submissions.problemId,
+      userId: submissions.userId,
+      createdAt: submissions.createdAt,
+    })
     .from(submissions)
     .where(eq(submissions.id, result.submissionId))
     .limit(1);
@@ -79,7 +86,7 @@ async function handleResult(result) {
 
   if (submission.status !== "PENDING" && submission.status !== "RUNNING") {
     console.log(
-      `[${result.submissionId}] already processed (status=${submission.status}), skipping`
+      `[${result.submissionId}] already processed (status=${submission.status}), skipping`,
     );
     return;
   }
@@ -98,7 +105,7 @@ async function handleResult(result) {
     .where(eq(submissions.id, result.submissionId));
 
   console.log(
-    `[${result.submissionId}] ${result.status} — ${result.passedCount}/${result.totalCount} passed — ${result.runtimeMs}ms`
+    `[${result.submissionId}] ${result.status} — ${result.passedCount}/${result.totalCount} passed — ${result.runtimeMs}ms`,
   );
 
   // Publish to Redis so the ws-server can push the verdict to the connected client.
@@ -117,10 +124,26 @@ async function handleResult(result) {
         testCaseResults: result.testCaseResults,
         passedCount: result.passedCount,
         totalCount: result.totalCount,
-      })
+      }),
     );
+
+    if (submission.contestId) {
+      await updateContestScore(
+        {
+          contestId: submission.contestId,
+          problemId: submission.problemId,
+          userId: submission.userId,
+          createdAt: submission.createdAt,
+          status: result.status,
+        },
+        redis,
+      );
+    }
   } catch (err) {
-    console.error(`[redis] failed to publish verdict for ${result.submissionId}:`, err.message);
+    console.error(
+      `[redis] failed to publish verdict for ${result.submissionId}:`,
+      err.message,
+    );
   }
 }
 
@@ -138,7 +161,7 @@ async function poll() {
           MaxNumberOfMessages: 10,
           WaitTimeSeconds: 20, // long-poll — cheaper than hammering SQS
           VisibilityTimeout: VISIBILITY_TIMEOUT_SECONDS,
-        })
+        }),
       ));
     } catch (err) {
       // Transient receive failure (throttling, network). Back off and retry
@@ -167,7 +190,7 @@ async function poll() {
           new DeleteMessageCommand({
             QueueUrl: QUEUE_URL,
             ReceiptHandle: msg.ReceiptHandle,
-          })
+          }),
         );
       } catch (err) {
         console.error(`[${result?.submissionId}] handler error:`, err.message);

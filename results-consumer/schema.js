@@ -13,6 +13,22 @@ import {
   index,
 } from "drizzle-orm/pg-core";
 
+export const contest = pgTable(
+  "contest" , {
+    id : uuid("id").primaryKey().defaultRandom(),
+    title : varchar("title", { length: 255 }).notNull(),
+    description : text("description").notNull(),
+    slug : text("slug").notNull().unique(),
+    startsAt : timestamp("startsAt").notNull(),
+    endsAt : timestamp("endsAt").notNull(),
+    registrationStartsAt : timestamp("registrationStartsAt").notNull(),
+    registrationEndsAt : timestamp("registrationEndsAt").notNull(),
+    status : varchar("status", { length: 255 }).notNull().default("DRAFT"),
+    createdByUserId : uuid("createdByUserId"),
+    createdAt : timestamp("createdAt").defaultNow(),
+    updatedAt : timestamp("updatedAt").defaultNow(),
+  }
+)
 export const submissions = pgTable(
   "submissions",
   {
@@ -25,6 +41,10 @@ export const submissions = pgTable(
     compileError: text("compileError"),
     testCaseResults: jsonb("testCaseResults"),
     updatedAt: timestamp("updatedAt").defaultNow(),
+    createdAt: timestamp("createdAt").defaultNow(),
+    contestId: uuid("contestId").references(() => contest.id),
   },
   (table) => [index("idx_submissions_id").on(table.id)],
 );
+
+
