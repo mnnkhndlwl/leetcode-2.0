@@ -33,15 +33,29 @@
     {
       "idx": 4,
       "version": "7",
-      "when": 1748694200000,
+      "when": 1779092101097,
       "tag": "0004_submission_idempotency_key",
       "breakpoints": true
     },
     {
       "idx": 5,
       "version": "7",
-      "when": 1748694300000,
+      "when": 1779092101098,
       "tag": "0005_submission_request_hash",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1779092101099,
+      "tag": "0006_add_contest_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1779092101100,
+      "tag": "0007_contest_finalize_trigger",
       "breakpoints": true
     }
   ]

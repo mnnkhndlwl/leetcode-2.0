@@ -1,0 +1,5 @@
+export const CONTEST_STATUS = {
+  DRAFT: "DRAFT",
+  RUNNING: "RUNNING",
+  FINISHED: "FINISHED",
+};

@@ -9,6 +9,7 @@ import { eq } from "drizzle-orm";
 import { db } from "./db.js";
 import { submissions } from "./schema.js";
 import { updateContestScore } from "./updateContestScore.js";
+import { startContestLifecycleSweep } from "./contestLifecycle.js";
 
 // Redis publisher — used to notify the ws-server that a verdict is ready.
 // This is best-effort: the DB write is the source of truth. If Redis is down
@@ -199,6 +200,8 @@ async function poll() {
     }
   }
 }
+
+startContestLifecycleSweep();
 
 poll().catch((err) => {
   console.error("Fatal:", err);
