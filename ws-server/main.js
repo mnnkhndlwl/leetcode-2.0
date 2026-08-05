@@ -6,8 +6,14 @@ import { eq } from "drizzle-orm";
 import { db } from "./db.js";
 import { submissions } from "./schema.js";
 import { subscribe } from "./redis.js";
+import {
+  sendContestSnapshot,
+  startContestBroadcastTicker,
+  roomName,
+} from "./contestRoom.js";
 
 const PORT = process.env.PORT ?? 3001;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // ── HTTP + Socket.IO bootstrap ───────────────────────────────────────────────
 
@@ -125,10 +131,43 @@ io.on("connection", (socket) => {
     }
   });
 
+  // ── watch:contest ─────────────────────────────────────────────────────────
+  // Joins the Socket.IO room for a contest's live leaderboard. The 10s
+  // broadcast ticker (startContestBroadcastTicker) pushes `contest:leaderboard`
+  // to everyone in the room, plus a personal `contest:rank` to anyone outside
+  // the top 50 — this just sends an immediate one-shot snapshot so the client
+  // isn't waiting for the next tick.
+  socket.on("watch:contest", async (contestId) => {
+    if (typeof contestId !== "string" || !UUID_RE.test(contestId)) {
+      socket.emit("contest:error", { message: "Invalid contestId" });
+      return;
+    }
+
+    socket.join(roomName(contestId));
+
+    try {
+      await sendContestSnapshot(socket, contestId);
+    } catch (err) {
+      console.error(
+        `[ws] watch:contest error — userId=${socket.user.id} contestId=${contestId}:`,
+        err.message,
+      );
+      socket.emit("contest:error", { message: "Internal server error" });
+    }
+  });
+
+  socket.on("unwatch:contest", (contestId) => {
+    if (typeof contestId === "string" && UUID_RE.test(contestId)) {
+      socket.leave(roomName(contestId));
+    }
+  });
+
   socket.on("disconnect", (reason) => {
     console.log(`[ws] - disconnected userId=${socket.user.id}  socketId=${socket.id}  reason=${reason}`);
   });
 });
+
+startContestBroadcastTicker(io);
 
 // ── Start ────────────────────────────────────────────────────────────────────
 

@@ -11,6 +11,11 @@ import {
   index,
 } from "drizzle-orm/pg-core";
 
+export const users = pgTable("users", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  username: varchar("username", { length: 255 }).notNull(),
+});
+
 export const submissions = pgTable(
   "submissions",
   {
