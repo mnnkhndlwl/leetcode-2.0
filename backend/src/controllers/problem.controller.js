@@ -1,22 +1,12 @@
+import { HTTP } from "../constants/http.js";
+import { searchProblems } from "../utils/problemSearch.js";
 import { db } from "../db/index.js";
 import { problems } from "../db/schema.js";
-import { eq, asc } from "drizzle-orm";
-import { HTTP } from "../constants/http.js";
+import { eq } from "drizzle-orm";
 
-export const getProblems = async (_req, res) => {
-  const list = await db
-    .select({
-      id: problems.id,
-      title: problems.title,
-      difficulty: problems.difficulty,
-      slug: problems.slug,
-      totalSubmissions: problems.totalSubmissions,
-      totalAccepted: problems.totalAccepted,
-    })
-    .from(problems)
-    .where(eq(problems.visibility, "PUBLIC"))
-    .orderBy(asc(problems.createdAt));
-
+export const getProblems = async (req, res) => {
+  const { q, limit } = req.validatedQuery;
+  const list = await searchProblems(q, { limit });
   return res.status(HTTP.OK).json(list);
 };
 
