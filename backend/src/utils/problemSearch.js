@@ -84,7 +84,17 @@ async function filterByDifficulty(difficulty, limit) {
 }
 
 /**
- * Primary path: tsvector @@ plainto_tsquery, plus exact/contains tag match.
+ * Primary path: every term must be individually covered — either as an FTS
+ * lexeme or a tag substring match — for a problem to count as a hit.
+ *
+ * This is deliberately per-term AND, not "does ANY term match ANY tag OR does
+ * the whole-text tsquery match": a document-level OR let one term coincidentally
+ * matching an unrelated tag (e.g. "two" hitting the "Two Pointers" tag) count
+ * the whole multi-term query as satisfied, even when another term (e.g. a typo
+ * like "som") matched nothing at all anywhere. That poisoned result set was
+ * non-empty, which short-circuited the trigram fallback below and hid the
+ * actually-correct typo-tolerant match ("two som" -> "Two Sum").
+ *
  * Deliberately no trigram here — "substring" must not fuzzy-hit the "String" tag.
  */
 async function runFtsAndTagSearch({ difficulty, text, terms, limit }) {
@@ -105,22 +115,20 @@ async function runFtsAndTagSearch({ difficulty, text, terms, limit }) {
     FROM problems p
     WHERE p.visibility = 'PUBLIC'
       ${difficultyClause}
-      AND (
-        p."searchVector" @@ plainto_tsquery('english', ${text})
-        OR EXISTS (
-          SELECT 1
-          FROM "problemTags" pt
-          JOIN tags t ON t.id = pt."tagId"
-          WHERE pt."problemId" = p.id
-            AND (
-              lower(t.name) = ANY(${termsArr})
-              OR lower(replace(t.name, ' ', '-')) = ANY(${termsArr})
-              OR EXISTS (
-                SELECT 1 FROM unnest(${termsArr}) AS term
-                WHERE lower(t.name) LIKE '%' || term || '%'
-                   OR lower(t.slug) LIKE '%' || term || '%'
+      AND NOT EXISTS (
+        SELECT 1 FROM unnest(${termsArr}) AS term
+        WHERE NOT (
+          p."searchVector" @@ plainto_tsquery('english', term)
+          OR EXISTS (
+            SELECT 1
+            FROM "problemTags" pt
+            JOIN tags t ON t.id = pt."tagId"
+            WHERE pt."problemId" = p.id
+              AND (
+                lower(t.name) LIKE '%' || term || '%'
+                OR lower(t.slug) LIKE '%' || term || '%'
               )
-            )
+          )
         )
       )
     ORDER BY rank DESC, p."createdAt" ASC
