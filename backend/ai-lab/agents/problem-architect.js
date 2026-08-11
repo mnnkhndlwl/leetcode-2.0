@@ -1,11 +1,10 @@
 /**
- * Problem Architect (Phase 4 Node A) — standalone for now.
+ * Problem Architect (Phase 4 Node A).
  *
- * Usage (from backend/):
+ * Standalone (install via MCP):
  *   node ai-lab/agents/problem-architect.js "binary search on answer"
  *
- * Generates a create_problem draft via OpenAI structured output, then installs
- * it through the db-explorer MCP tool with a bounded reflection loop (max 3).
+ * Graph use: import { generateProblemDraft } from this module.
  */
 
 import { dirname, join } from "node:path";
@@ -77,9 +76,7 @@ async function loadDriverCodeExemplar() {
       codeTemplates: problems.codeTemplates,
     })
     .from(problems)
-    .where(
-      sql`"driverCode" ? 'javascript' AND "driverCode" ? 'python3'`
-    )
+    .where(sql`"driverCode" ? 'javascript' AND "driverCode" ? 'python3'`)
     .limit(1);
 
   if (!fallback) {
@@ -93,9 +90,7 @@ async function loadDriverCodeExemplar() {
 // ── Prompt / feedback ───────────────────────────────────────────────────────
 
 function buildSystemPrompt(tagRows, exemplar) {
-  const vocab = tagRows
-    .map((t) => `- ${t.slug} (${t.name})`)
-    .join("\n");
+  const vocab = tagRows.map((t) => `- ${t.slug} (${t.name})`).join("\n");
 
   return `You are a problem architect for a LeetCode-style judge.
 
@@ -208,7 +203,60 @@ async function connectMcp() {
   return { client, transport };
 }
 
-// ── Main loop ───────────────────────────────────────────────────────────────
+/**
+ * Structured-output draft only (Node A). No MCP install.
+ *
+ * @param {string} topic
+ * @param {{ revisionFeedback?: string | null }} [opts]
+ * @returns {Promise<object>} sanitized create_problem-shaped draft
+ */
+export async function generateProblemDraft(topic, opts = {}) {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error(
+      "OPENAI_API_KEY is not set — add it to backend/.env before running the architect"
+    );
+  }
+  if (!topic?.trim()) {
+    throw new Error("topic is required");
+  }
+
+  const [tagRows, exemplar] = await Promise.all([
+    loadTagVocabulary(),
+    loadDriverCodeExemplar(),
+  ]);
+  const problemSchema = buildProblemDraftSchema(tagRows.map((t) => t.slug));
+  const openai = new OpenAI();
+
+  const userParts = [
+    `Design and fully specify a coding problem for this topic:\n<user_topic>\n${topic.trim()}\n</user_topic>`,
+  ];
+  if (opts.revisionFeedback?.trim()) {
+    userParts.push(
+      `\nRevision required from the Adversary / Solver pipeline:\n${opts.revisionFeedback.trim()}\nStrengthen hidden testCases (and fix expectedOutput / referenceSolutions to stay consistent). Keep the same topic.`
+    );
+  }
+
+  const completion = await openai.chat.completions.parse({
+    model: MODEL,
+    messages: [
+      { role: "system", content: buildSystemPrompt(tagRows, exemplar) },
+      { role: "user", content: userParts.join("\n") },
+    ],
+    response_format: zodResponseFormat(problemSchema, "problem_draft"),
+  });
+
+  const message = completion.choices[0].message;
+  if (message.refusal) {
+    throw new Error(`Architect refused: ${message.refusal}`);
+  }
+  if (!message.parsed) {
+    throw new Error("Architect returned no parsed problem_draft");
+  }
+
+  return sanitizeProblemDraft(message.parsed);
+}
+
+// ── Standalone install loop (MCP) ───────────────────────────────────────────
 
 /**
  * @param {string} topic
@@ -247,7 +295,9 @@ export async function runArchitect(topic) {
     mcp = await connectMcp();
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-      console.error(`\n[architect] attempt ${attempt}/${MAX_ATTEMPTS} — generating…`);
+      console.error(
+        `\n[architect] attempt ${attempt}/${MAX_ATTEMPTS} — generating…`
+      );
 
       const completion = await openai.chat.completions.parse({
         model: MODEL,
@@ -257,7 +307,10 @@ export async function runArchitect(topic) {
 
       const message = completion.choices[0].message;
       if (message.refusal) {
-        lastFailure = { success: false, error: `Model refused: ${message.refusal}` };
+        lastFailure = {
+          success: false,
+          error: `Model refused: ${message.refusal}`,
+        };
         console.error("[architect] model refused:", message.refusal);
         messages.push(message);
         messages.push({
@@ -278,7 +331,8 @@ export async function runArchitect(topic) {
         messages.push(message);
         messages.push({
           role: "user",
-          content: "Your previous reply did not parse. Emit a complete valid problem_draft.",
+          content:
+            "Your previous reply did not parse. Emit a complete valid problem_draft.",
         });
         continue;
       }
@@ -349,9 +403,7 @@ export async function runArchitect(topic) {
 async function main() {
   const topic = process.argv.slice(2).join(" ").trim();
   if (!topic) {
-    console.error(
-      'Usage: node ai-lab/agents/problem-architect.js "<topic>"'
-    );
+    console.error('Usage: node ai-lab/agents/problem-architect.js "<topic>"');
     process.exit(1);
   }
 
