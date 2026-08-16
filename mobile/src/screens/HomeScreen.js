@@ -158,6 +158,37 @@ export default function HomeScreen({ navigation }) {
           <Text style={styles.problemsStateText}>No problems yet.</Text>
         )}
       </View>
+
+      {/* Quick Navigation */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Your Learning Loop</Text>
+        <View style={styles.navGrid}>
+          <TouchableOpacity
+            style={styles.navTile}
+            onPress={() => navigation.navigate("Contests")}
+          >
+            <Text style={styles.navTileText}>Contests</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.navTile}
+            onPress={() => navigation.navigate("ProblemSearch")}
+          >
+            <Text style={styles.navTileText}>Search</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.navTile}
+            onPress={() => navigation.navigate("Completed")}
+          >
+            <Text style={styles.navTileText}>Completed</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.navTile}
+            onPress={() => navigation.navigate("Gaps")}
+          >
+            <Text style={styles.navTileText}>Gaps</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     </ScrollView>
   );
 }
@@ -206,6 +237,18 @@ const styles = StyleSheet.create({
     borderColor: "#2a2a40",
   },
   cardTitle: { fontSize: 16, fontWeight: "700", color: "#e8e8f0", marginBottom: 16 },
+  navGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  navTile: {
+    flexBasis: "46%",
+    backgroundColor: "#121225",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#2a2a40",
+    paddingVertical: 14,
+    alignItems: "center",
+    marginBottom: 0,
+  },
+  navTileText: { color: "#e8e8f0", fontWeight: "800" },
 
   barRow: {
     flexDirection: "row",
