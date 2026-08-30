@@ -10,10 +10,10 @@ export function newIdempotencyKey() {
   });
 }
 
-export async function submitCode({ problemId, language, code, idempotencyKey }) {
+export async function submitCode({ problemId, language, code, idempotencyKey, contestId }) {
   const res = await api.post(
     "/submissions",
-    { problemId, language, code },
+    contestId ? { problemId, language, code, contestId } : { problemId, language, code },
     idempotencyKey
       ? { headers: { "Idempotency-Key": idempotencyKey } }
       : undefined,

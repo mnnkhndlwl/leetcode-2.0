@@ -134,6 +134,50 @@ export default function ContestDetailScreen({ route, navigation }) {
         <Text style={styles.infoText}>Your rank: {effectiveRank ?? "--"}</Text>
       </View>
 
+      {contest.status === "DRAFT" ? (
+        <View style={styles.infoBox}>
+          <Text style={styles.infoText}>
+            Problems will be revealed once the contest starts.
+          </Text>
+        </View>
+      ) : (
+        <>
+          <Text style={styles.sectionTitle}>Problems</Text>
+          {(contest.problems ?? []).length === 0 ? (
+            <Text style={styles.muted}>No problems attached to this contest.</Text>
+          ) : (
+            (contest.problems ?? []).map((p) => (
+              <TouchableOpacity
+                key={p.id}
+                style={styles.problemRow}
+                activeOpacity={0.7}
+                onPress={() =>
+                  navigation.navigate("Submit", {
+                    slug: p.slug,
+                    title: p.title,
+                    contestId: contest.id,
+                  })
+                }
+              >
+                <View
+                  style={[
+                    styles.problemDot,
+                    { backgroundColor: DIFFICULTY_COLOR(p.difficulty) },
+                  ]}
+                />
+                <Text style={styles.problemTitle} numberOfLines={1}>
+                  {p.title}
+                </Text>
+                <Text style={[styles.problemDifficulty, { color: DIFFICULTY_COLOR(p.difficulty) }]}>
+                  {p.difficulty}
+                </Text>
+                <Text style={styles.problemPoints}>{p.points} pts</Text>
+              </TouchableOpacity>
+            ))
+          )}
+        </>
+      )}
+
       <Text style={styles.sectionTitle}>{leaderboardTitle}</Text>
 
       <View style={styles.tableHeader}>
@@ -200,6 +244,13 @@ const STATUS_COLOR = (status) => {
   return "#6b6b80";
 };
 
+const DIFFICULTY_COLOR = (difficulty) => {
+  if (difficulty === "Easy") return "#00b8a3";
+  if (difficulty === "Medium") return "#ffa116";
+  if (difficulty === "Hard") return "#ef4743";
+  return "#6b6b80";
+};
+
 function RegisterCTA({ slug, onRegistered }) {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
@@ -254,6 +305,24 @@ const styles = StyleSheet.create({
   infoText: { color: "#e8e8f0", fontWeight: "600" },
 
   sectionTitle: { marginTop: 12, marginBottom: 10, color: "#e8e8f0", fontSize: 16, fontWeight: "800" },
+  muted: { color: "#6b6b80", fontSize: 14, marginBottom: 12 },
+
+  problemRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: "#1a1a2e",
+    borderWidth: 1,
+    borderColor: "#2a2a40",
+    marginBottom: 8,
+  },
+  problemDot: { width: 8, height: 8, borderRadius: 4 },
+  problemTitle: { flex: 1, color: "#e8e8f0", fontWeight: "600", fontSize: 14 },
+  problemDifficulty: { fontSize: 12, fontWeight: "700", marginRight: 8 },
+  problemPoints: { color: "#6b6b80", fontSize: 12, fontWeight: "600" },
 
   primaryBtn: {
     backgroundColor: "#ffa116",

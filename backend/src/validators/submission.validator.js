@@ -17,4 +17,12 @@ export const submitCodeSchema = z.object({
     .string({ error: "code is required" })
     .min(1, { message: "code cannot be empty" })
     .max(65536, { message: "code cannot exceed 64KB" }),
+
+  contestId: z
+    .string()
+    .regex(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+      { message: "contestId must be a valid UUID" },
+    )
+    .optional(),
 });

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { db } from "../db/index.js";
-import { problems, submissions } from "../db/schema.js";
+import { contest, contestProblems, problems, submissions } from "../db/schema.js";
 import { and, eq } from "drizzle-orm";
 import { publishToQueue } from "../utils/sqs.js";
 import { HTTP } from "../constants/http.js";
@@ -16,10 +16,44 @@ function isUniqueViolation(err) {
 
 // Fingerprint of the request a key represents, so reusing a key with different
 // code can be detected and rejected.
-function hashRequest({ problemId, language, code }) {
+function hashRequest({ problemId, language, code, contestId }) {
   return createHash("sha256")
-    .update(JSON.stringify({ problemId, language, code }))
+    .update(JSON.stringify({ problemId, language, code, contestId: contestId ?? null }))
     .digest("hex");
+}
+
+// Verifies the problem actually belongs to the contest and the submission
+// window (raw timestamps, not the `status` label — which only updates on the
+// results-consumer's 60s sweep) is currently open.
+async function assertContestSubmissionAllowed(contestId, problemId) {
+  const [row] = await db
+    .select({
+      startsAt: contest.startsAt,
+      endsAt: contest.endsAt,
+      contestProblemId: contestProblems.problemId,
+    })
+    .from(contest)
+    .leftJoin(
+      contestProblems,
+      and(
+        eq(contestProblems.contestId, contest.id),
+        eq(contestProblems.problemId, problemId),
+      ),
+    )
+    .where(eq(contest.id, contestId))
+    .limit(1);
+
+  if (!row) {
+    return "Contest not found";
+  }
+  if (!row.contestProblemId) {
+    return "This problem is not part of that contest";
+  }
+  const now = new Date();
+  if (now < row.startsAt || now > row.endsAt) {
+    return "Submissions are only accepted while the contest is running";
+  }
+  return null;
 }
 
 async function findByIdempotencyKey(userId, key) {
@@ -37,9 +71,16 @@ async function findByIdempotencyKey(userId, key) {
 
 export const submitCode = async (req, res) => {
   const { id: userId } = req.user;
-  const { problemId, language, code } = req.body;
+  const { problemId, language, code, contestId = null } = req.body;
   const idempotencyKey = req.idempotencyKey ?? null;
-  const requestHash = hashRequest({ problemId, language, code });
+  const requestHash = hashRequest({ problemId, language, code, contestId });
+
+  if (contestId) {
+    const contestError = await assertContestSubmissionAllowed(contestId, problemId);
+    if (contestError) {
+      return res.status(HTTP.FORBIDDEN).json({ error: contestError });
+    }
+  }
 
   // 1. Verify the problem exists and is public — also grab limits and test case key
   const [problem] = await db
@@ -135,6 +176,7 @@ export const submitCode = async (req, res) => {
         idempotencyKey,
         requestHash,
         status: SUBMISSION_STATUS.PENDING,
+        contestId,
       })
       .returning({ id: submissions.id });
   } catch (err) {

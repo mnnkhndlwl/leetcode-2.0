@@ -1,6 +1,6 @@
-import { asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { contest, contestParticipants, users } from "../db/schema.js";
+import { contest, contestParticipants, contestProblems, problems, users } from "../db/schema.js";
 import { HTTP } from "../constants/http.js";
 import { CONTEST_STATUS } from "../constants/contest.js";
 import { redis } from "../utils/redis.js";
@@ -57,7 +57,31 @@ export const getContest = async (req, res) => {
     return res.status(HTTP.NOT_FOUND).json({ error: "Contest not found" });
   }
 
-  return res.status(HTTP.OK).json(row);
+  // Problems stay hidden until the contest actually starts — no early peeking
+  // at what's coming while it's still DRAFT.
+  const contestProblemRows =
+    row.status === CONTEST_STATUS.DRAFT
+      ? []
+      : await db
+          .select({
+            id: problems.id,
+            slug: problems.slug,
+            title: problems.title,
+            difficulty: problems.difficulty,
+            points: contestProblems.points,
+            displayOrder: contestProblems.displayOrder,
+          })
+          .from(contestProblems)
+          .innerJoin(problems, eq(problems.id, contestProblems.problemId))
+          .where(
+            and(
+              eq(contestProblems.contestId, row.id),
+              eq(contestProblems.isVisible, true),
+            ),
+          )
+          .orderBy(asc(contestProblems.displayOrder));
+
+  return res.status(HTTP.OK).json({ ...row, problems: contestProblemRows });
 };
 
 export const registerForContest = async (req, res) => {

@@ -56,7 +56,7 @@ function errorTitle(status) {
 }
 
 export default function SubmitScreen({ route }) {
-  const { slug } = route.params;
+  const { slug, contestId } = route.params;
 
   const { data: problem, isLoading, isError } = useQuery({
     queryKey: ["problem", slug],
@@ -100,6 +100,7 @@ export default function SubmitScreen({ route }) {
       language: lang,
       code,
       idempotencyKey: newIdempotencyKey(),
+      contestId,
     });
   }
 
@@ -130,10 +131,56 @@ export default function SubmitScreen({ route }) {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView contentContainerStyle={styles.content}>
+        {contestId ? (
+          <View style={styles.contestBanner}>
+            <Text style={styles.contestBannerText}>
+              Contest submission — this counts toward your live rank
+            </Text>
+          </View>
+        ) : null}
         <Text style={styles.title}>{problem.title}</Text>
-        <View style={styles.diffPill}>
-          <Text style={styles.diffText}>{problem.difficulty}</Text>
+        <View style={styles.metaRow}>
+          <View style={styles.diffPill}>
+            <Text style={styles.diffText}>{problem.difficulty}</Text>
+          </View>
+          {problem.totalSubmissions > 0 && (
+            <Text style={styles.acceptRate}>
+              {Math.round((problem.totalAccepted / problem.totalSubmissions) * 100)}%
+              {" "}accepted · {problem.totalSubmissions} submissions
+            </Text>
+          )}
         </View>
+
+        {/* Description */}
+        {problem.description ? (
+          <Text style={styles.description}>{problem.description}</Text>
+        ) : null}
+
+        {/* Examples */}
+        {Array.isArray(problem.sampleTestCases) &&
+          problem.sampleTestCases.length > 0 && (
+            <View style={styles.examplesWrap}>
+              {problem.sampleTestCases.map((ex, i) => (
+                <View key={i} style={styles.card}>
+                  <Text style={styles.exampleTitle}>Example {i + 1}</Text>
+                  <Text style={styles.exampleLabel}>Input</Text>
+                  <Text style={styles.exampleText} selectable>
+                    {ex.input}
+                  </Text>
+                  <Text style={styles.exampleLabel}>Output</Text>
+                  <Text style={styles.exampleText} selectable>
+                    {ex.output}
+                  </Text>
+                  {ex.explanation ? (
+                    <>
+                      <Text style={styles.exampleLabel}>Explanation</Text>
+                      <Text style={styles.exampleText}>{ex.explanation}</Text>
+                    </>
+                  ) : null}
+                </View>
+              ))}
+            </View>
+          )}
 
         {/* Language selector */}
         <View style={styles.langRow}>
@@ -274,18 +321,66 @@ const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 48 },
   muted: { color: "#6b6b80", fontSize: 15 },
 
+  contestBanner: {
+    backgroundColor: "#1e1b4b",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#3730a3",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+    alignSelf: "flex-start",
+  },
+  contestBannerText: { color: "#818cf8", fontSize: 12, fontWeight: "700" },
+
   title: { fontSize: 22, fontWeight: "700", color: "#e8e8f0" },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 10,
+    marginTop: 8,
+  },
   diffPill: {
     alignSelf: "flex-start",
     backgroundColor: "#1a1a2e",
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    marginTop: 8,
     borderWidth: 1,
     borderColor: "#2a2a40",
   },
   diffText: { color: "#ffa116", fontSize: 12, fontWeight: "600" },
+  acceptRate: { color: "#6b6b80", fontSize: 12 },
+
+  description: {
+    color: "#c8c8d8",
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: 16,
+  },
+
+  examplesWrap: { gap: 12, marginTop: 4 },
+  exampleTitle: {
+    color: "#e8e8f0",
+    fontSize: 13,
+    fontWeight: "700",
+    marginBottom: 8,
+  },
+  exampleLabel: {
+    color: "#6b6b80",
+    fontSize: 11,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginTop: 8,
+  },
+  exampleText: {
+    color: "#c8c8d8",
+    fontFamily: MONO,
+    fontSize: 13,
+    marginTop: 4,
+  },
 
   langRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 18 },
   langChip: {
