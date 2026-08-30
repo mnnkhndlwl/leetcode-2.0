@@ -2,6 +2,8 @@
 
 A full-stack competitive-programming platform: a React Native mobile app where users solve coding problems, submit solutions, and get **live judging verdicts** streamed back over WebSockets. Submissions are executed in sandboxed Docker containers by a horizontally-scalable Node judge worker.
 
+https://youtu.be/ho94zXWy_XA
+
 ---
 
 ## Architecture
